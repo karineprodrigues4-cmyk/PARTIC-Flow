@@ -2129,6 +2129,280 @@ function Arquivo() {
 }
 
 
+// ─── IMPORTAÇÃO ───────────────────────────────────────────────────────────────
+const FIELD_MAP = {
+  name: ["nome","name","nome completo","nome do profissional","profissional"],
+  specialty: ["especialidade","specialty","area","área"],
+  subspecialty: ["subespecialidade","subspecialty","sub especialidade"],
+  profession: ["profissão","profession","categoria","tipo"],
+  city: ["cidade","city","município","municipio","cidade-estado"],
+  state: ["estado","state","uf"],
+  personalContact: ["telefone pessoal","whatsapp pessoal","celular pessoal","telefone","whatsapp","celular","phone"],
+  schedulingContact: ["whatsapp agendamento","telefone agendamento","agendamento","secretaria"],
+  email: ["email","e-mail","mail"],
+  instagram: ["instagram","insta","ig"],
+  site: ["site","website","url"],
+  formation: ["formacao","formação","faculdade","universidade","instituição"],
+  councilNumber: ["crm","crp","cro","conselho","registro"],
+  rqe: ["rqe"],
+  cpf: ["cpf"],
+  address: ["endereco","endereço","address"],
+  source: ["origem","origin","fonte","canal"],
+  notes: ["observacoes","observações","obs","notas"],
+  monthlyFee: ["mensalidade","fee","valor","plano"],
+};
+
+function normKey2(s) { return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]/g,"").trim(); }
+
+function detectField2(col) {
+  const n = normKey2(col);
+  for (const [field, aliases] of Object.entries(FIELD_MAP)) {
+    for (const alias of aliases) {
+      const a = normKey2(alias);
+      if (n === a || n.includes(a) || a.includes(n)) return field;
+    }
+  }
+  return null;
+}
+
+function parseCSV2(text) {
+  const lines = text.split(/?
+/).filter(l => l.trim());
+  if (!lines.length) return { headers: [], rows: [] };
+  const firstLine = lines[0];
+  const delimiters = [";", ",", "	", "|"];
+  const delim = delimiters.reduce((best, d) => (firstLine.split(d).length > firstLine.split(best).length ? d : best), ";");
+  function parseLine(line) {
+    const result = []; let cur = ""; let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === '"') { inQ = !inQ; }
+      else if (line[i] === delim && !inQ) { result.push(cur.trim()); cur = ""; }
+      else cur += line[i];
+    }
+    result.push(cur.trim());
+    return result;
+  }
+  const headers = parseLine(lines[0]);
+  const rows = lines.slice(1).map(l => parseLine(l));
+  return { headers, rows };
+}
+
+function Importacao({ onNav }) {
+  const [step, setStep] = useState("upload");
+  const [destination, setDestination] = useState("leads");
+  const [fileName, setFileName] = useState("");
+  const [parsed, setParsed] = useState(null);
+  const [mapping, setMapping] = useState({});
+  const [preview, setPreview] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [importedCount, setImportedCount] = useState(0);
+
+  const DEST_OPTIONS = [
+    { id: "leads", label: "Leads", desc: "Banco de contatos para prospecção", icon: "👥" },
+    { id: "members", label: "Membros", desc: "Profissionais ativos da PARTIC", icon: "⭐" },
+    { id: "curation", label: "Curadoria", desc: "Leads em processo de avaliação", icon: "🔍" },
+  ];
+
+  const FIELD_LABELS = {
+    name: "Nome", specialty: "Especialidade", subspecialty: "Subespecialidade",
+    profession: "Profissão", city: "Cidade", state: "Estado",
+    personalContact: "Tel. Pessoal", schedulingContact: "Tel. Agendamento",
+    email: "E-mail", instagram: "Instagram", site: "Site",
+    formation: "Formação", councilNumber: "CRM/CRP", rqe: "RQE",
+    cpf: "CPF", address: "Endereço", source: "Origem", notes: "Observações",
+    monthlyFee: "Mensalidade",
+  };
+
+  async function handleFile(e) {
+    const file = e.target.files[0]; if (!file) return;
+    setLoading(true); setFileName(file.name);
+    try {
+      let result;
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        const text = await file.text();
+        result = parseCSV2(text);
+      } else {
+        // XLSX - load SheetJS dynamically
+        await new Promise((res, rej) => {
+          if (window.XLSX) { res(); return; }
+          const s = document.createElement("script");
+          s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+          s.onload = res; s.onerror = rej;
+          document.head.appendChild(s);
+        });
+        const buffer = await file.arrayBuffer();
+        const wb = window.XLSX.read(new Uint8Array(buffer), { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        const headers = (json[0] || []).map(h => String(h));
+        const rows = json.slice(1).map(r => headers.map((_, i) => String(r[i] || "")));
+        result = { headers, rows: rows.filter(r => r.some(c => c.trim())) };
+      }
+      const autoMapping = {};
+      result.headers.forEach(h => { const f = detectField2(h); if (f) autoMapping[h] = f; });
+      setMapping(autoMapping); setParsed(result); setStep("mapping");
+    } catch(err) { alert("Erro ao ler arquivo: " + err.message); }
+    setLoading(false);
+  }
+
+  function normContact(raw, dest) {
+    const base = {
+      id: Date.now() + Math.random(),
+      name: (raw.name || "").trim(),
+      specialty: (raw.specialty || "").trim(),
+      subspecialty: (raw.subspecialty || "").trim(),
+      profession: (raw.profession || "Médico").trim(),
+      city: (raw.city || "").trim(),
+      state: (raw.state || "").trim(),
+      email: (raw.email || "").trim(),
+      instagram: (raw.instagram || "").trim(),
+      formation: (raw.formation || "").trim(),
+      councilNumber: (raw.councilNumber || "").trim(),
+      source: (raw.source || "Importação").trim(),
+      notes: (raw.notes || "").trim(),
+      createdAt: new Date().toISOString(),
+    };
+    if (dest === "members") {
+      return { ...base, personalContact: raw.personalContact || "", schedulingContact: raw.schedulingContact || "", monthlyFee: parseFloat(raw.monthlyFee) || 0, status: "active", isAnchor: false, joinedAt: new Date().toISOString() };
+    }
+    return { ...base, phone: raw.personalContact || "", stage: dest === "curation" ? "curadoria_avaliacao" : "lead" };
+  }
+
+  function buildPreview() {
+    const rows = parsed.rows.slice(0, 5).map(row => {
+      const raw = {};
+      parsed.headers.forEach((h, i) => { if (mapping[h]) raw[mapping[h]] = row[i]; });
+      return normContact(raw, destination);
+    });
+    setPreview(rows); setStep("preview");
+  }
+
+  function doImport() {
+    const normK = c => ((c.name||"").toLowerCase().trim() + "|" + (c.city||"").toLowerCase().trim().replace(/\s*[-,]\s*[a-z]{2}$/i,""));
+    const allContacts = parsed.rows
+      .map(row => { const raw = {}; parsed.headers.forEach((h,i) => { if (mapping[h]) raw[mapping[h]] = row[i]; }); return normContact(raw, destination); })
+      .filter(c => c.name && c.name.trim());
+    const seen = new Set(); const unique = allContacts.filter(c => { const k = normK(c); if (seen.has(k)) return false; seen.add(k); return true; });
+
+    if (destination === "members") {
+      const existing = DB.get("members", []);
+      const existingKeys = new Set(existing.map(normK));
+      const newOnes = unique.filter(c => !existingKeys.has(normK(c)));
+      DB.set("members", [...existing, ...newOnes]);
+      setImportedCount(newOnes.length);
+    } else {
+      const existing = DB.get("contacts", []);
+      const existingKeys = new Set(existing.map(normK));
+      const newOnes = unique.filter(c => !existingKeys.has(normK(c)));
+      DB.set("contacts", [...existing, ...newOnes]);
+      setImportedCount(newOnes.length);
+    }
+    setStep("done");
+    showToast("Importação concluída ✓");
+  }
+
+  function reset() { setStep("upload"); setParsed(null); setMapping({}); setPreview([]); setFileName(""); setImportedCount(0); }
+
+  return (
+    <div>
+      <div style={S.topbar}>
+        <div><h1 style={S.sectionTitle}>Importação de Dados</h1><p style={S.sectionSub}>CSV ou XLSX · mapeamento automático · dados incompletos são aceitos</p></div>
+        {step !== "upload" && <button style={S.btnO} onClick={reset}>← Nova importação</button>}
+      </div>
+
+      {step === "upload" && (
+        <div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
+            {DEST_OPTIONS.map(d => (
+              <div key={d.id} onClick={() => setDestination(d.id)}
+                style={{ ...S.card, cursor: "pointer", border: destination === d.id ? `2px solid ${C.azulPetroleo}` : "1px solid #e5e5e5", background: destination === d.id ? C.azulPetroleo + "08" : "#fff" }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>{d.icon}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, color: destination === d.id ? C.azulPetroleo : "#1a1a1a" }}>{d.label}</div>
+                <div style={{ fontSize: 12, color: "#888" }}>{d.desc}</div>
+                {destination === d.id && <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: C.azulPetroleo }}>✓ Selecionado</div>}
+              </div>
+            ))}
+          </div>
+          <label style={{ display: "block", cursor: "pointer" }}>
+            <div style={{ border: "2px dashed #ddd", borderRadius: 14, padding: "48px 24px", textAlign: "center", background: "#fafafa" }}>
+              {loading ? <><div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div><p style={{ fontSize: 14, color: C.azulPetroleo, fontWeight: 600, margin: 0 }}>Lendo arquivo...</p></>
+              : <><div style={{ fontSize: 48, marginBottom: 12 }}>📂</div><p style={{ fontSize: 16, fontWeight: 700, color: "#333", margin: "0 0 6px" }}>Arraste seu arquivo aqui</p><p style={{ fontSize: 13, color: "#888", margin: "0 0 16px" }}>ou clique para selecionar · .csv ou .xlsx</p><span style={{ ...S.btnP, display: "inline-flex" }}>Selecionar arquivo</span></>}
+            </div>
+            <input type="file" accept=".csv,.xlsx,.xls" style={{ display: "none" }} onChange={handleFile} />
+          </label>
+        </div>
+      )}
+
+      {step === "mapping" && parsed && (
+        <div>
+          <div style={{ ...S.card, marginBottom: 16 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 4px" }}>Mapeamento de Colunas</h3>
+            <p style={{ fontSize: 12, color: "#888", margin: "0 0 16px" }}>{parsed.rows.length} linhas detectadas · {Object.keys(mapping).length} colunas mapeadas automaticamente</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {parsed.headers.map(h => (
+                <div key={h} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: mapping[h] ? "#f0faf4" : "#fff9ec", borderRadius: 8, border: `1px solid ${mapping[h] ? "#a7f0d8" : "#fde68a"}` }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600 }}>{mapping[h] ? "✓ " : "⚠ "}{h}</div>
+                    {parsed.rows[0] && <div style={{ fontSize: 10, color: "#aaa", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>ex: {parsed.rows[0][parsed.headers.indexOf(h)] || "—"}</div>}
+                  </div>
+                  <select value={mapping[h] || ""} onChange={e => setMapping(m => ({ ...m, [h]: e.target.value || undefined }))}
+                    style={{ fontSize: 11, padding: "3px 6px", border: "1px solid #ddd", borderRadius: 6, background: "#fff", minWidth: 120 }}>
+                    <option value="">— ignorar —</option>
+                    {Object.entries(FIELD_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={S.btnP} onClick={buildPreview}>Ver prévia →</button>
+            <button style={S.btnO} onClick={reset}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {step === "preview" && (
+        <div>
+          <div style={{ background: "#f0f4ff", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: C.azulPetroleo, marginBottom: 16 }}>
+            👁️ Prévia dos primeiros {preview.length} registros de <strong>{parsed.rows.length} total</strong>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+            {preview.map((c, i) => (
+              <div key={i} style={{ ...S.card, padding: "12px 16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Avatar name={c.name} size={36} fixed />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{c.name || <span style={{ color: "#EF4444" }}>⚠ Nome não detectado</span>}</div>
+                    <div style={{ fontSize: 11, color: "#666" }}>{c.specialty}{c.city ? ` · ${c.city}` : ""}{c.state ? `, ${c.state}` : ""}</div>
+                    <div style={{ fontSize: 11, color: "#aaa" }}>{c.phone || c.personalContact ? "📱 " + (c.phone || c.personalContact) : ""} {c.email ? "✉️ " + c.email : ""}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ ...S.btnP, height: 40, fontSize: 14 }} onClick={doImport}>✓ Confirmar importação ({parsed.rows.length})</button>
+            <button style={S.btnO} onClick={() => setStep("mapping")}>← Revisar mapeamento</button>
+          </div>
+        </div>
+      )}
+
+      {step === "done" && (
+        <div style={{ ...S.card, textAlign: "center", padding: "60px 40px" }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: C.azulPetroleo, margin: "0 0 8px" }}>{importedCount} contatos importados!</h2>
+          <p style={{ fontSize: 14, color: "#888", margin: "0 0 24px" }}>Dados salvos em <strong>{DEST_OPTIONS.find(d => d.id === destination)?.label}</strong>. Dados incompletos podem ser editados a qualquer momento.</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+            <button style={S.btnP} onClick={reset}>← Importar outro arquivo</button>
+            <button style={S.btnG} onClick={() => onNav && onNav(destination)}>Ver dados importados →</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // ─── SCRIPTS OPERACIONAIS ─────────────────────────────────────────────────────
 function Scripts() {
   const [scripts, setScripts] = useState(DB.get("scripts", []));
