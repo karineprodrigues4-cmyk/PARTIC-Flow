@@ -558,7 +558,7 @@ function Leads({ onNav }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-              {lead.phone && <a href={`https://wa.me/55${lead.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp} WhatsApp</a>}
+              {(lead.phone || lead.personalContact) && <a href={`https://wa.me/55${(lead.phone || lead.personalContact || "").replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp} WhatsApp</a>}
               {lead.email && <a href={`mailto:${lead.email}`} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
               {lead.instagram && lead.instagram !== "A verificar" && <a href={`https://instagram.com/${lead.instagram.replace("@","")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#833ab4"), textDecoration: "none" }}>{I.ig}</a>}
             </div>
@@ -748,7 +748,13 @@ function Curadoria({ onNav }) {
                         </p>
                       </div>
                     </div>
-                    {item.phone && <div style={{ fontSize: 11, color: "#888", marginBottom: 6 }}>📱 {item.phone}</div>}
+                    {(item.phone || item.personalContact) && (
+                      <div style={{ fontSize: 11, color: "#888", marginBottom: 6, display: "flex", gap: 6, alignItems: "center" }}>
+                        📱 {item.phone || item.personalContact}
+                        <a href={`https://wa.me/55${(item.phone || item.personalContact || "").replace(/\D/g,"")}`} target="_blank" rel="noreferrer"
+                          style={{ background: "#128C7E", color: "#fff", borderRadius: 5, padding: "1px 7px", fontSize: 10, textDecoration: "none", fontWeight: 700 }}>{I.wpp}</a>
+                      </div>
+                    )}
                     {stage === "curadoria_avaliacao" && (
                       <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
                         <button style={{ flex: 1, background: "#f0faf4", color: "#0f6e56", border: "1px solid #a7f0d8", borderRadius: 7, padding: "5px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
@@ -794,7 +800,7 @@ function Curadoria({ onNav }) {
               ))}
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {sel.phone && <a href={`https://wa.me/55${sel.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp} WhatsApp</a>}
+              {(sel.phone || sel.personalContact) && <a href={`https://wa.me/55${(sel.phone || sel.personalContact || "").replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp} WhatsApp</a>}
               {sel.email && <a href={`mailto:${sel.email}`} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
               <a href={`https://www.google.com/search?q=${encodeURIComponent(sel.name+" "+(sel.specialty||"")+" "+(stripState(sel.city)||""))}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#185fa5"), textDecoration: "none" }}>🔍 Google</a>
               {sel.stage === "curadoria_avaliacao" && <>
@@ -1023,7 +1029,7 @@ function Comercial() {
             </div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {sel.phone && <a href={`https://wa.me/55${sel.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp} WhatsApp</a>}
+              {(sel.phone || sel.personalContact) && <a href={`https://wa.me/55${(sel.phone || sel.personalContact || "").replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp} WhatsApp</a>}
               {sel.email && <a href={`mailto:${sel.email}`} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
               {sel.stage === "comercial_fechou" && <button style={S.btnG} onClick={() => convertToMember(sel)}>🎉 Converter para Membro</button>}
               <button style={S.btnD} onClick={() => sendToArchive(sel.id)}>🗃️ Sem Interesse → Arquivo</button>
@@ -2063,10 +2069,21 @@ function Arquivo() {
         </span>
       </td>
       <td style={S.td}>
-        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-          {item.phone && <a href={`https://wa.me/55${item.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ color: "#128C7E" }}>{I.wpp}</a>}
-          {item.email && <a href={`mailto:${item.email}`} style={{ color: C.azulPetroleo }}>{I.mail}</a>}
-          <span style={{ fontSize: 11, color: "#aaa" }}>{item.phone || item.email || "—"}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {(item.phone || item.personalContact) && (
+            <a href={`https://wa.me/55${(item.phone || item.personalContact || "").replace(/\D/g,"")}`}
+              target="_blank" rel="noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#128C7E", color: "#fff", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 700, textDecoration: "none", width: "fit-content" }}>
+              {I.wpp} {item.phone || item.personalContact}
+            </a>
+          )}
+          {item.email && (
+            <a href={`mailto:${item.email}`}
+              style={{ display: "inline-flex", alignItems: "center", gap: 4, background: C.azulPetroleo + "15", color: C.azulPetroleo, borderRadius: 6, padding: "3px 8px", fontSize: 11, textDecoration: "none", width: "fit-content" }}>
+              {I.mail} {item.email}
+            </a>
+          )}
+          {!item.phone && !item.personalContact && !item.email && <span style={{ fontSize: 11, color: "#ccc" }}>Sem contato</span>}
         </div>
       </td>
       <td style={S.td}>
