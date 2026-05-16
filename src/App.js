@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"; // v1778967234
+import { useState, useEffect, useMemo } from "react";
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 const DB = {
@@ -2166,9 +2166,7 @@ function detectField2(col) {
 }
 
 function parseCSV2(text) {
-  const lines = text.split(/
-?
-/).filter(l => l.trim());
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
   if (!lines.length) return { headers: [], rows: [] };
   const firstLine = lines[0];
   const delimiters = [";", ",", "	", "|"];
