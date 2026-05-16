@@ -952,6 +952,15 @@ function Comercial() {
                         </div>
                       </div>
                       {/* Only advance button — no going back */}
+                      {stage === "comercial_reuniao" && (
+                        <div onClick={e => e.stopPropagation()} style={{ marginBottom: 4 }}>
+                          <input type="datetime-local"
+                            value={item.meetingDate || ""}
+                            onChange={e => { e.stopPropagation(); moveStage(item.id, "comercial_reuniao", { meetingDate: e.target.value }); }}
+                            style={{ width: "100%", fontSize: 10, padding: "4px 6px", border: "1px solid #FED7AA", borderRadius: 6, background: "#FFF7ED", color: "#92400e" }} />
+                          {item.meetingDate && <div style={{ fontSize: 9, color: "#F97316", marginTop: 2, fontWeight: 700 }}>📅 {new Date(item.meetingDate).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}</div>}
+                        </div>
+                      )}
                       {nextCfg && (
                         <button onClick={e => { e.stopPropagation(); advanceStage(item.id, stage); }}
                           style={{ width: "100%", background: nextCfg.color+"15", color: nextCfg.color, border: `1px solid ${nextCfg.color}30`, borderRadius: 6, padding: "5px 0", fontSize: 10, fontWeight: 700, cursor: "pointer", marginBottom: 4 }}>
@@ -970,6 +979,10 @@ function Comercial() {
                           {I.wpp} WhatsApp
                         </a>
                       )}
+                      <button onClick={e => { e.stopPropagation(); sendToArchive(item.id); }}
+                        style={{ width: "100%", background: "#f7f7f5", color: "#888", border: "1px solid #e5e5e5", borderRadius: 6, padding: "4px 0", fontSize: 10, cursor: "pointer", marginTop: 3 }}>
+                        🚫 Sem Interesse
+                      </button>
                     </div>
                   );
                 })}
