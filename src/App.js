@@ -274,12 +274,9 @@ function Dashboard({ onNav, user }) {
           <p style={S.sectionSub}>{now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-  
-          <button style={S.btnP} onClick={() => onNav("diagnostic")}>{I.diag} Diagnóstico</button>
-        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
         {[
           { label: "Membros Ativos", value: activeM, sub: `de ${members.length} total`, color: C.azulPetroleo, icon: "👥", page: "members" },
           { label: "Em Curadoria", value: inEval, sub: `${approved} aprovados`, color: "#F59E0B", icon: "🔍", page: "curadoria" },
@@ -464,46 +461,47 @@ function Leads({ onNav }) {
   const leads = contacts.filter(c => c.stage === "lead");
 
   const cityOptions = useMemo(() => {
-    const map = new Map();
+    const seen = new Set();
+    const result = [];
     leads.forEach(l => {
-      const base = stripState(l.city);
-      if (!base || base.trim().length < 2) return;
-      const key = base.trim();
-      if (!map.has(key)) {
-        const cityStr = l.city || "";
-        const stMatch = cityStr.match(/[-,]\s*([A-Za-z]{2})$/) || cityStr.match(/\/([A-Za-z]{2})$/);
-        const st = l.state || (stMatch ? stMatch[1].toUpperCase() : "");
-        map.set(key, st ? `${base} - ${st}` : base);
-      }
+      const base = stripState(l.city || "").trim();
+      if (!base || base.length < 2) return;
+      const key = base.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      const st = l.state || "";
+      const label = st ? base + " - " + st.toUpperCase() : base;
+      result.push([base, label]);
     });
-    return [...map.entries()].sort((a,b) => a[1].localeCompare(b[1], "pt-BR"));
+    return result.sort((a,b) => a[1].localeCompare(b[1], "pt-BR"));
   }, [leads]);
 
   const specOptions = useMemo(() => {
-    const map = new Map();
+    const seen = new Set();
+    const result = [];
     leads.forEach(l => {
-      if (!l.specialty) return;
-      const key = norm(l.specialty);
-      if (!map.has(key)) map.set(key, l.specialty.trim());
+      const spec = (l.specialty || "").trim();
+      if (!spec) return;
+      const key = spec.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      result.push([spec, spec]);
     });
-    return [...map.entries()].sort((a,b) => a[1].localeCompare(b[1]));
+    return result.sort((a,b) => a[1].localeCompare(b[1], "pt-BR"));
   }, [leads]);
 
-  const normAccents = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
+  const normStr = s => (s||"").trim().toLowerCase();
   const filtered = leads.filter(l => {
     if (filters.city) {
-      const leadCity = normAccents(stripState(l.city || l.state || ""));
-      const filterCity = normAccents(filters.city);
-      if (!leadCity.includes(filterCity) && !filterCity.includes(leadCity)) return false;
+      const leadCity = normStr(stripState(l.city));
+      const filterCity = normStr(filters.city);
+      if (leadCity !== filterCity) return false;
     }
     if (filters.spec) {
-      const leadSpec = normAccents(l.specialty || "");
-      const filterSpec = normAccents(filters.spec);
-      if (!leadSpec.includes(filterSpec) && !filterSpec.includes(leadSpec)) return false;
+      if (normStr(l.specialty) !== normStr(filters.spec)) return false;
     }
     if (filters.search) {
-      const q = normAccents(filters.search);
-      if (!normAccents(l.name).includes(q)) return false;
+      if (!normStr(l.name).includes(normStr(filters.search))) return false;
     }
     return true;
   });
@@ -555,12 +553,12 @@ function Leads({ onNav }) {
         <select style={{ ...S.select, width: "auto", minWidth: 180, height: 34, fontSize: 12 }}
           value={filters.city} onChange={e => setFilters(f => ({ ...f, city: e.target.value }))}>
           <option value="">Todas as cidades</option>
-          {cityOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          {cityOptions.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
         </select>
         <select style={{ ...S.select, width: "auto", minWidth: 180, height: 34, fontSize: 12 }}
           value={filters.spec} onChange={e => setFilters(f => ({ ...f, spec: e.target.value }))}>
           <option value="">Todas especialidades</option>
-          {specOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          {specOptions.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
         </select>
         {(filters.city || filters.spec || filters.search) && (
           <button style={{ ...S.btnO, fontSize: 11, height: 30 }} onClick={() => setFilters({ city: "", spec: "", search: "" })}>✕ Limpar</button>
@@ -3614,7 +3612,7 @@ function StudioMain({ subpage, onNav }) {
         <div><h1 style={S.sectionTitle}>Studio PARTIC</h1><p style={S.sectionSub}>Hub operacional de marketing e conteúdo</p></div>
         <button style={S.btnP} onClick={() => onNav("studio_calendar")}>{I.calendar} Ver Calendário</button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
         {[
           { label: "Total de conteúdos", value: totalContent, color: C.azulPetroleo, icon: "📄" },
           { label: "Aguardando aprovação", value: pendingApproval, color: "#F59E0B", icon: "⏳" },
