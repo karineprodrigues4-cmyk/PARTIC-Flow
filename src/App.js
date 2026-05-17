@@ -382,149 +382,90 @@ function Dashboard({ onNav, user }) {
 }
 
 // ─── LEADS ────────────────────────────────────────────────────────────────────
-// SINGLE SOURCE OF TRUTH: all contacts in "contacts" table with a "stage" field
-// stage flow: lead → curadoria_avaliacao → curadoria_aprovado → comercial_* → membro
-//             lead → curadoria_avaliacao → curadoria_reprovado (→ arquivo)
-
-function useContacts() {
-  const [contacts, setContactsState] = useState(() => {
-    const stored = DB.get("contacts", null);
-    // Migrate old data if needed
-    if (!stored) {
-      const oldLeads = DB.get("leads", []);
-      const oldCuration = DB.get("curation", []);
-      const oldCommercial = DB.get("commercial", []);
-      const migrated = [];
-      const seen = new Set();
-      const addContact = (c, stage) => {
-        const key = (c.name||"").toLowerCase().trim();
-        if (!key || seen.has(key)) return;
-        seen.add(key);
-        migrated.push({ ...c, id: c.id || Date.now() + Math.random(), stage, createdAt: c.createdAt || new Date().toISOString() });
-      };
-      // Commercial has highest priority
-      oldCommercial.forEach(c => {
-        const stageMap = { prospecto:"comercial_prospecto", aguardando_resposta:"comercial_aguardando", reuniao_agendada:"comercial_reuniao", negociacao:"comercial_negociacao", fechou:"comercial_fechou", sem_interesse:"comercial_sem_interesse" };
-        addContact(c, stageMap[c.stage] || "comercial_prospecto");
-      });
-      // Then curation
-      oldCuration.forEach(c => {
-        const stageMap = { em_avaliacao:"curadoria_avaliacao", aprovado:"curadoria_aprovado", reprovado:"curadoria_reprovado" };
-        addContact(c, stageMap[c.status] || "curadoria_avaliacao");
-      });
-      // Then leads
-      oldLeads.forEach(c => addContact(c, "lead"));
-      DB.set("contacts", migrated);
-      return migrated;
-    }
-    // Deduplicate on load
-    const seen = new Set();
-    return stored.filter(c => {
-      const key = (c.name||"").toLowerCase().trim();
-      if (!key) return false;
-      if (seen.has(key)) return false;
-      seen.add(key); return true;
-    });
-  });
-
-  const save = (updated) => {
-    // Deduplicate before saving
-    const seen = new Set();
-    const deduped = updated.filter(c => {
-      const key = (c.name||"").toLowerCase().trim();
-      if (!key) return false;
-      if (seen.has(key)) return false;
-      seen.add(key); return true;
-    });
-    setContactsState(deduped);
-    DB.set("contacts", deduped);
-  };
-
-  const moveStage = (id, newStage, extra = {}) => {
-    save(contacts.map(c => c.id === id ? { ...c, stage: newStage, ...extra, lastMoved: new Date().toISOString() } : c));
-  };
-
-  return { contacts, save, moveStage };
-}
-
 function Leads({ onNav }) {
   const { contacts, save, moveStage } = useContacts();
+
   const [filters, setFilters] = useState({ city: "", spec: "", search: "" });
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", specialty: "", subspecialty: "", profession: "Médico", city: "", state: "", phone: "", email: "", instagram: "", source: "Indicação", formation: "" });
+  const [form, setForm] = useState({
+    name: "", specialty: "", subspecialty: "", profession: "Medico",
+    city: "", state: "", phone: "", email: "", instagram: "", source: "Indicacao"
+  });
 
-  const norm = s => (s||"").toLowerCase().trim();
-  const stripState = c => (c||"").replace(/[\s]*[-,][\s]*[A-Za-z]{2}$/, "").replace(/\/[A-Za-z]{2}$/, "").trim();
+  // Strip state suffix: "Ribeirao Preto/SP" -> "Ribeirao Preto"
+  const stripSuffix = c => (c || "").replace(/\s*[-\/,]\s*[A-Za-z]{2}$/, "").trim();
 
-  // ONLY show contacts with stage = "lead"
+  // Only contacts with stage = "lead", deduplicated by name
   const leads = contacts.filter(c => c.stage === "lead");
 
-  const cityOptions = useMemo(() => {
-    const seen = new Set();
-    const result = [];
-    leads.forEach(l => {
-      const base = stripState(l.city || "").trim();
-      if (!base || base.length < 2) return;
-      const key = base.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-      const st = l.state || "";
-      const label = st ? base + " - " + st.toUpperCase() : base;
-      result.push([base, label]);
-    });
-    return result.sort((a,b) => a[1].localeCompare(b[1], "pt-BR"));
-  }, [leads]);
+  // Unique cities from leads
+  const cityOptions = [];
+  const seenCities = new Set();
+  leads.forEach(l => {
+    const city = stripSuffix(l.city || "").trim();
+    if (!city || city.length < 2) return;
+    const key = city.toLowerCase();
+    if (seenCities.has(key)) return;
+    seenCities.add(key);
+    const st = (l.state || "").toUpperCase();
+    cityOptions.push({ value: city, label: st ? city + " - " + st : city });
+  });
+  cityOptions.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
-  const specOptions = useMemo(() => {
-    const seen = new Set();
-    const result = [];
-    leads.forEach(l => {
-      const spec = (l.specialty || "").trim();
-      if (!spec) return;
-      const key = spec.toLowerCase();
-      if (seen.has(key)) return;
-      seen.add(key);
-      result.push([spec, spec]);
-    });
-    return result.sort((a,b) => a[1].localeCompare(b[1], "pt-BR"));
-  }, [leads]);
+  // Unique specialties from leads
+  const specOptions = [];
+  const seenSpecs = new Set();
+  leads.forEach(l => {
+    const spec = (l.specialty || "").trim();
+    if (!spec) return;
+    const key = spec.toLowerCase();
+    if (seenSpecs.has(key)) return;
+    seenSpecs.add(key);
+    specOptions.push({ value: spec, label: spec });
+  });
+  specOptions.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
-  const normStr = s => (s||"").trim().toLowerCase();
+  // Apply filters with exact match
   const filtered = leads.filter(l => {
     if (filters.city) {
-      const leadCity = normStr(stripState(l.city));
-      const filterCity = normStr(filters.city);
-      if (leadCity !== filterCity) return false;
+      const leadCity = stripSuffix(l.city || "").trim().toLowerCase();
+      if (leadCity !== filters.city.toLowerCase()) return false;
     }
     if (filters.spec) {
-      if (normStr(l.specialty) !== normStr(filters.spec)) return false;
+      const leadSpec = (l.specialty || "").trim().toLowerCase();
+      if (leadSpec !== filters.spec.toLowerCase()) return false;
     }
     if (filters.search) {
-      if (!normStr(l.name).includes(normStr(filters.search))) return false;
+      const q = filters.search.toLowerCase();
+      if (!(l.name || "").toLowerCase().includes(q)) return false;
     }
     return true;
   });
 
   function sendToCuration(id) {
-    // Move contact: lead → curadoria_avaliacao (REMOVES from leads)
     moveStage(id, "curadoria_avaliacao");
-    showToast("Enviado para Curadoria ✓");
+    showToast("Enviado para Curadoria!");
   }
 
   function addLead() {
-    if (!form.name.trim()) return alert("Nome é obrigatório");
-    const newContact = { ...form, id: Date.now() + Math.random(), stage: "lead", createdAt: new Date().toISOString() };
+    if (!form.name.trim()) return alert("Nome e obrigatorio");
+    const newContact = {
+      ...form,
+      id: Date.now() + Math.random(),
+      stage: "lead",
+      createdAt: new Date().toISOString()
+    };
     save([...contacts, newContact]);
     setShowAdd(false);
-    showToast("Lead adicionado ✓");
-    setForm({ name: "", specialty: "", subspecialty: "", profession: "Médico", city: "", state: "", phone: "", email: "", instagram: "", source: "Indicação", formation: "" });
+    showToast("Lead adicionado!");
+    setForm({ name: "", specialty: "", subspecialty: "", profession: "Medico", city: "", state: "", phone: "", email: "", instagram: "", source: "Indicacao" });
   }
 
-  const cityLabel = (city, state) => {
-    const base = stripState(city);
-    const cityStr2 = city || ""; const stMatch2 = cityStr2.match(/[\-,]\s*([A-Za-z]{2})$/) || cityStr2.match(/\/([A-Za-z]{2})$/); const st = state || (stMatch2 ? stMatch2[1].toUpperCase() : "") || "";
-    return st ? `${base} - ${st}` : base;
-  };
+  function deleteLead(id) {
+    if (!confirm("Remover este lead?")) return;
+    save(contacts.filter(c => c.id !== id));
+    showToast("Lead removido");
+  }
 
   return (
     <div>
@@ -533,81 +474,121 @@ function Leads({ onNav }) {
           <h1 style={S.sectionTitle}>Leads</h1>
           <p style={S.sectionSub}>
             <span style={{ color: C.azulPetroleo, fontWeight: 600 }}>{leads.length} contatos</span>
-            <span style={{ color: "#aaa", marginLeft: 8, fontSize: 11 }}>· prontos para curadoria</span>
+            <span style={{ color: "#aaa", marginLeft: 8, fontSize: 11 }}>prontos para curadoria</span>
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button style={S.btnG} onClick={() => onNav("generator")}>{I.generator} Gerar com IA</button>
-          <button style={S.btnP} onClick={() => setShowAdd(true)}>{I.plus} Novo lead</button>
-        </div>
+        <button style={S.btnP} onClick={() => setShowAdd(true)}>{I.plus} Novo lead</button>
       </div>
 
       {/* Filtros */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ position: "relative" }}>
-          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#aaa" }}>{I.search}</span>
-          <input style={{ ...S.input, width: 200, paddingLeft: 28, height: 34 }} placeholder="Buscar por nome..."
-            value={filters.search} onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} />
+          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#aaa", fontSize: 12 }}>{I.search}</span>
+          <input style={{ ...S.input, width: 200, paddingLeft: 28, height: 34, fontSize: 12 }}
+            placeholder="Buscar por nome..."
+            value={filters.search}
+            onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} />
         </div>
-        <select style={{ ...S.select, width: "auto", minWidth: 180, height: 34, fontSize: 12 }}
-          value={filters.city} onChange={e => setFilters(f => ({ ...f, city: e.target.value }))}>
+
+        <select style={{ ...S.select, height: 34, fontSize: 12, minWidth: 190 }}
+          value={filters.city}
+          onChange={e => setFilters(f => ({ ...f, city: e.target.value }))}>
           <option value="">Todas as cidades</option>
-          {cityOptions.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+          {cityOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <select style={{ ...S.select, width: "auto", minWidth: 180, height: 34, fontSize: 12 }}
-          value={filters.spec} onChange={e => setFilters(f => ({ ...f, spec: e.target.value }))}>
-          <option value="">Todas especialidades</option>
-          {specOptions.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+
+        <select style={{ ...S.select, height: 34, fontSize: 12, minWidth: 190 }}
+          value={filters.spec}
+          onChange={e => setFilters(f => ({ ...f, spec: e.target.value }))}>
+          <option value="">Todas as especialidades</option>
+          {specOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
+
         {(filters.city || filters.spec || filters.search) && (
-          <button style={{ ...S.btnO, fontSize: 11, height: 30 }} onClick={() => setFilters({ city: "", spec: "", search: "" })}>✕ Limpar</button>
+          <button style={{ ...S.btnO, height: 30, fontSize: 11 }}
+            onClick={() => setFilters({ city: "", spec: "", search: "" })}>
+            x Limpar
+          </button>
         )}
-        <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto" }}>{filtered.length} lead{filtered.length !== 1 ? "s" : ""}</span>
+        <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto" }}>
+          {filtered.length} lead{filtered.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
       {/* Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 10 }}>
-        {filtered.map(lead => (
-          <div key={lead.id} style={{ ...S.card, padding: "14px 16px", borderLeft: `3px solid ${C.azulPetroleo}` }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-              <Avatar name={lead.name} size={38} fixed />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lead.name}</p>
-                <p style={{ fontSize: 11, color: "#666", margin: "0 0 2px" }}>{lead.specialty || "—"}{lead.subspecialty ? ` · ${lead.subspecialty}` : ""}</p>
-                <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>📍 {cityLabel(lead.city, lead.state) || "Cidade não informada"}</p>
+        {filtered.map(lead => {
+          const city = stripSuffix(lead.city || "");
+          const st = (lead.state || "").toUpperCase();
+          const cityDisplay = city ? (st ? city + " - " + st : city) : "";
+          const phone = lead.phone || lead.personalContact || "";
+          const ig = (lead.instagram || "").replace("@", "");
+
+          return (
+            <div key={lead.id} style={{ ...S.card, padding: "14px 16px", borderLeft: "3px solid " + C.azulPetroleo }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                <Avatar name={lead.name} size={38} fixed />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lead.name}</p>
+                  <p style={{ fontSize: 11, color: "#555", margin: "0 0 2px" }}>
+                    {lead.specialty || "Especialidade nao informada"}
+                    {lead.subspecialty ? " · " + lead.subspecialty : ""}
+                  </p>
+                  {cityDisplay && <p style={{ fontSize: 11, color: "#888", margin: 0 }}>📍 {cityDisplay}</p>}
+                </div>
+              </div>
+
+              {/* Botoes de contato */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                {phone && <WppBtn phone={phone} />}
+                {lead.email && (
+                  <a href={"mailto:" + lead.email}
+                    style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>
+                    {I.mail} E-mail
+                  </a>
+                )}
+                {ig && ig !== "A verificar" && (
+                  <a href={"https://instagram.com/" + ig} target="_blank" rel="noreferrer"
+                    style={{ ...S.btnSm("#833ab4"), textDecoration: "none" }}>
+                    {I.ig} Instagram
+                  </a>
+                )}
+              </div>
+
+              {/* Acoes */}
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => sendToCuration(lead.id)}
+                  style={{ flex: 1, background: C.azulPetroleo + "12", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "30", borderRadius: 8, padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  Enviar para Curadoria
+                </button>
+                <button onClick={() => deleteLead(lead.id)}
+                  style={{ background: "#fff0f0", color: "#a32d2d", border: "1px solid #fca5a5", borderRadius: 8, padding: "7px 10px", fontSize: 12, cursor: "pointer" }}>
+                  {I.trash}
+                </button>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-              <WppBtn phone={lead.phone || lead.personalContact} />
-              {lead.email && <a href={"mailto:" + lead.email} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
-              {lead.instagram && lead.instagram !== "A verificar" && <a href={"https://instagram.com/" + (lead.instagram||"").replace("@","")} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#833ab4"), textDecoration: "none" }}>{I.ig} Instagram</a>}
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => sendToCuration(lead.id)}
-                style={{ flex: 1, background: C.azulPetroleo + "12", color: C.azulPetroleo, border: `1px solid ${C.azulPetroleo}30`, borderRadius: 8, padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                → Enviar para Curadoria
-              </button>
-              <button onClick={() => { if (confirm(`Remover "${lead.name}"?`)) save(contacts.filter(c => c.id !== lead.id)); }}
-                style={{ background: "#fff0f0", color: "#a32d2d", border: "1px solid #fca5a5", borderRadius: 8, padding: "7px 10px", fontSize: 12, cursor: "pointer" }}>
-                {I.trash}
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
+
         {filtered.length === 0 && (
           <div style={{ gridColumn: "1/-1", ...S.card, textAlign: "center", padding: "48px 20px", color: "#aaa" }}>
             <p style={{ fontSize: 32, margin: "0 0 10px" }}>📋</p>
-            <p style={{ margin: 0 }}>{leads.length === 0 ? "Nenhum lead. Use Importação ou Gerador de Leads IA." : "Nenhum lead corresponde aos filtros."}</p>
+            <p style={{ margin: 0 }}>
+              {leads.length === 0
+                ? "Nenhum lead. Use Importacao para adicionar contatos."
+                : "Nenhum lead corresponde aos filtros."}
+            </p>
           </div>
         )}
       </div>
 
+      {/* Modal novo lead */}
       {showAdd && (
         <div style={S.modal} onClick={() => setShowAdd(false)}>
           <div style={S.modalBox} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 18px" }}>Novo Lead</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-              <div style={{ gridColumn: "1/-1" }}><label style={S.lbl}>Nome *</label><input style={S.input} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
+              <div style={{ gridColumn: "1/-1" }}><label style={S.lbl}>Nome</label><input style={S.input} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
               <div><label style={S.lbl}>Especialidade</label><input style={S.input} value={form.specialty} onChange={e => setForm(p => ({ ...p, specialty: e.target.value }))} /></div>
               <div><label style={S.lbl}>Subespecialidade</label><input style={S.input} value={form.subspecialty} onChange={e => setForm(p => ({ ...p, subspecialty: e.target.value }))} /></div>
               <div><label style={S.lbl}>Cidade</label><input style={S.input} value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} /></div>
@@ -617,7 +598,7 @@ function Leads({ onNav }) {
               <div><label style={S.lbl}>Instagram</label><input style={S.input} value={form.instagram} onChange={e => setForm(p => ({ ...p, instagram: e.target.value }))} /></div>
               <div><label style={S.lbl}>Origem</label>
                 <select style={S.select} value={form.source} onChange={e => setForm(p => ({ ...p, source: e.target.value }))}>
-                  {["Indicação","Instagram","Google","Gerador IA PARTIC","Evento","Site"].map(o => <option key={o}>{o}</option>)}
+                  {["Indicacao", "Instagram", "Google", "Evento", "Site"].map(o => <option key={o}>{o}</option>)}
                 </select>
               </div>
             </div>
