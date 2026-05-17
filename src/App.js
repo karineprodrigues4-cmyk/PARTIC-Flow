@@ -381,6 +381,59 @@ function Dashboard({ onNav, user }) {
   );
 }
 
+// ─── CONTACTS HOOK ────────────────────────────────────────────────────────────
+function useContacts() {
+  const [contacts, setContactsState] = useState(() => {
+    const stored = DB.get("contacts", null);
+    if (!stored) {
+      const oldLeads = DB.get("leads", []).map(c => ({ ...c, stage: "lead" }));
+      const oldCuration = DB.get("curation", []).map(c => ({
+        ...c,
+        stage: c.status === "aprovado" ? "curadoria_aprovado" :
+               c.status === "reprovado" ? "curadoria_reprovado" : "curadoria_avaliacao"
+      }));
+      const migrated = [];
+      const seen = new Set();
+      [...oldCuration, ...oldLeads].forEach(c => {
+        const key = (c.name || "").toLowerCase().trim();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        migrated.push({ ...c, id: c.id || Date.now() + Math.random(), createdAt: c.createdAt || new Date().toISOString() });
+      });
+      DB.set("contacts", migrated);
+      return migrated;
+    }
+    const seen = new Set();
+    return stored.filter(c => {
+      const key = (c.name || "").toLowerCase().trim();
+      if (!key) return false;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  });
+
+  const save = updated => {
+    const seen = new Set();
+    const deduped = updated.filter(c => {
+      const key = (c.name || "").toLowerCase().trim();
+      if (!key) return false;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    setContactsState(deduped);
+    DB.set("contacts", deduped);
+  };
+
+  const moveStage = (id, newStage, extra) => {
+    save(contacts.map(c => c.id === id ? { ...c, stage: newStage, ...extra, lastMoved: new Date().toISOString() } : c));
+  };
+
+  return { contacts, save, moveStage };
+}
+
+
 // ─── LEADS ────────────────────────────────────────────────────────────────────
 function Leads({ onNav }) {
   const { contacts, save, moveStage } = useContacts();
