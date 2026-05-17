@@ -4141,7 +4141,7 @@ export default function App() {
   function handleLogout() { showToast("Logout simulado — login será reativado em breve", "info"); }
   function navigate(p) { setPage(p); }
 
-  if (showDiag) return <Diagnostic onComplete={() => { setShowDiag(false); setPage("dashboard"); }} />;
+
 
   const PAGES = {
     dashboard: <Dashboard onNav={navigate} user={user} />,
