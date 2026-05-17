@@ -3892,7 +3892,7 @@ function CentralOperacional() {
         {displayTasks.length === 0 && (
           <div style={{ ...S.card, textAlign: "center", padding: "48px 20px", color: "#aaa" }}>
             <p style={{ fontSize: 32, margin: "0 0 8px" }}>✅</p>
-            <p style={{ margin: 0 }}>{tab === "active" ? "Nenhuma tarefa ativa. Clique em "Nova tarefa" para começar." : "Nenhuma tarefa concluída ainda."}</p>
+            <p style={{ margin: 0 }}>{tab === "active" ? "Nenhuma tarefa ativa. Clique em Nova tarefa para começar." : "Nenhuma tarefa concluída ainda."}</p>
           </div>
         )}
       </div>
