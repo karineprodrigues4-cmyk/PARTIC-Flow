@@ -273,7 +273,6 @@ function Dashboard({ onNav, user }) {
           <h1 style={S.sectionTitle}>{greeting}, {firstName}! 👋</h1>
           <p style={S.sectionSub}>{now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
