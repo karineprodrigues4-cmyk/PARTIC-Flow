@@ -283,7 +283,7 @@ function Dashboard({ onNav, user }) {
         {[
           { label: "Membros Ativos", value: activeM, sub: `de ${members.length} total`, color: C.azulPetroleo, icon: "👥", page: "members" },
           { label: "Em Curadoria", value: inEval, sub: `${approved} aprovados`, color: "#F59E0B", icon: "🔍", page: "curadoria" },
-          { label: "Em Comercial", value: commercial.length, sub: "no pipeline", color: C.roxo, icon: "💼", page: "comercial" }`, sub: `${activeM} membros ativos`, color: C.verdeEscuro, icon: "💰", page: "members" },
+          { label: "Em Comercial", value: commercial.length, sub: "no pipeline", color: C.roxo, icon: "💼", page: "comercial" },
         ].map(k => (
           <div key={k.label} style={{ ...S.card, borderLeft: `3px solid ${k.color}`, cursor: "pointer" }} onClick={() => onNav(k.page)}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -1090,7 +1090,7 @@ function Members() {
   function exportCSV() {
     const cols = ["name", "profession", "specialty", "subspecialty", "city", "state", "personalContact", "schedulingContact", "email", "instagram", "status", "monthlyFee"];
     const hdr = ["Nome", "Profissão", "Especialidade", "Subespecialidade", "Cidade", "Estado", "Tel. Pessoal", "Tel. Agendamento", "E-mail", "Instagram", "Status", "Mensalidade"];
-    const rows = filtered.map(m => cols.map(c => { const v = String(m[c] || ""); return '"' + v.replace(/"/g, String.fromCharCode(34)+String.fromCharCode(34)) + '"'; }).join(";"));
+    const rows = filtered.map(m => cols.map(c => { const v = String(m[c] || "").replace(/"/g, ""); return v; }).join(";"));
     const csv = "\uFEFF" + [hdr.join(";"), ...rows].join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = `partic_membros_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     showToast("CSV exportado ✓");
