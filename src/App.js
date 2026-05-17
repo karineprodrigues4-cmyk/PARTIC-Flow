@@ -49,25 +49,6 @@ function WppBtn({ phone, size, showNumber }) {
   );
 }
 
-port { useState, useEffect, useMemo } from "react";
-const getCityColor = (city) => {
-  if (!city) return C.azulPetroleo;
-  // Direct match first
-  if (CITY_COLORS[city]) return CITY_COLORS[city];
-  // Normalize: strip state suffix like "/SP", " - SP", ", SP", "-SP"
-  const base = city.replace(/[\s]*[-,][\s]*[A-Z]{2}$/, "").replace(/\/[A-Z]{2}$/, "").trim();
-  if (CITY_COLORS[base]) return CITY_COLORS[base];
-  // Partial match: check if any key starts with the city
-  const lower = base.toLowerCase();
-  const match = Object.keys(CITY_COLORS).find(k => k.toLowerCase() === lower);
-  if (match) return CITY_COLORS[match];
-  // Generate consistent color from city name so same city always same color
-  const palette = ["#7153A2","#1B6B8A","#E67E22","#1A7A5E","#E74C3C","#2980B9","#8E44AD","#16A085","#D35400","#27AE60","#F39C12","#1ABC9C","#9B59B6","#3498DB","#C0392B","#2C3E50"];
-  let hash = 0;
-  for (let i = 0; i < base.length; i++) hash = (hash * 31 + base.charCodeAt(i)) & 0xFFFFFFFF;
-  return palette[Math.abs(hash) % palette.length];
-};
-
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
 const SEED_SCRIPTS = [
   { id: 1, category: "primeiro_contato", title: "Primeiro contato médico", content: "Olá, Dr(a). {{nome}}! 👋\n\nSou da equipe PARTIC — plataforma de curadoria para profissionais de saúde de excelência.\n\nVi seu perfil e acredito que você se encaixa perfeitamente no nosso padrão. Posso te apresentar em 10 minutos como funciona?\n\nAguardo seu retorno! 🙏" },
