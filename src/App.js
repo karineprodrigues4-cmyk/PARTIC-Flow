@@ -1,21 +1,5 @@
-im
-function WppBtn({ phone, size, showNumber }) {
-  const num = (phone || "").replace(/[^0-9]/g, "");
-  if (!num || num.length < 8) return null;
-  const isXs = size === "xs";
-  return (
-    <a href={"https://wa.me/55" + num} target="_blank" rel="noreferrer"
-      style={{ display: "inline-flex", alignItems: "center", gap: 4,
-        background: "#128C7E", color: "#fff", borderRadius: 7,
-        padding: isXs ? "2px 7px" : "5px 10px",
-        fontSize: isXs ? 10 : 12, fontWeight: 700,
-        textDecoration: "none", flexShrink: 0, whiteSpace: "nowrap" }}>
-      {I.wpp}{showNumber ? " " + phone : " WhatsApp"}
-    </a>
-  );
-}
+import { useState, useEffect, useMemo } from "react";
 
-port { useState, useEffect, useMemo } from "react";
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 const DB = {
@@ -39,6 +23,33 @@ const CITY_COLORS = {
   "Recife": "#9B59B6", "Brasília": "#E74C3C", "Goiânia": "#3498DB",
   "Manaus": "#E67E22", "Belém": "#16A085",
 };
+
+function getCityColor(city) {
+  const base = (city || "").replace(/[\s]*[-,][\s]*[A-Z]{2}$/, "").replace(/\/[A-Z]{2}$/, "").trim();
+  if (CITY_COLORS[base]) return CITY_COLORS[base];
+  let hash = 0;
+  for (let i = 0; i < base.length; i++) hash = base.charCodeAt(i) + ((hash << 5) - hash);
+  const colors = ["#1B6B8A","#4CAF82","#7153A2","#E67E22","#1A7A5E","#3498DB","#E74C3C","#8E44AD","#27AE60","#F39C12","#16A085","#D35400"];
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function WppBtn({ phone, size, showNumber }) {
+  const num = (phone || "").replace(/[^0-9]/g, "");
+  if (!num || num.length < 8) return null;
+  const isXs = size === "xs";
+  return (
+    <a href={"https://wa.me/55" + num} target="_blank" rel="noreferrer"
+      style={{ display: "inline-flex", alignItems: "center", gap: 4,
+        background: "#128C7E", color: "#fff", borderRadius: 7,
+        padding: isXs ? "2px 7px" : "5px 10px",
+        fontSize: isXs ? 10 : 12, fontWeight: 700,
+        textDecoration: "none", flexShrink: 0, whiteSpace: "nowrap" }}>
+      {I.wpp}{showNumber ? " " + phone : " WhatsApp"}
+    </a>
+  );
+}
+
+port { useState, useEffect, useMemo } from "react";
 const getCityColor = (city) => {
   if (!city) return C.azulPetroleo;
   // Direct match first
