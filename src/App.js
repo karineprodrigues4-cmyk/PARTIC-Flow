@@ -1,4 +1,21 @@
-import { useState, useEffect, useMemo } from "react";
+im
+function WppBtn({ phone, size, showNumber }) {
+  const num = (phone || "").replace(/[^0-9]/g, "");
+  if (!num || num.length < 8) return null;
+  const isXs = size === "xs";
+  return (
+    <a href={"https://wa.me/55" + num} target="_blank" rel="noreferrer"
+      style={{ display: "inline-flex", alignItems: "center", gap: 4,
+        background: "#128C7E", color: "#fff", borderRadius: 7,
+        padding: isXs ? "2px 7px" : "5px 10px",
+        fontSize: isXs ? 10 : 12, fontWeight: 700,
+        textDecoration: "none", flexShrink: 0, whiteSpace: "nowrap" }}>
+      {I.wpp}{showNumber ? " " + phone : " WhatsApp"}
+    </a>
+  );
+}
+
+port { useState, useEffect, useMemo } from "react";
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 const DB = {
@@ -182,6 +199,7 @@ const I = {
   chev: <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>,
   shield: <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
   export: <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  task: <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
   studio: <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
   calendar: <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
   upload: <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
@@ -246,7 +264,7 @@ function Dashboard({ onNav, user }) {
   const greeting = h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
   const firstName = (user?.name || "").split(" ")[0];
   const activeM = members.filter(m => m.status === "active").length;
-  const revenue = members.filter(m => m.status === "active").reduce((a, m) => a + (m.monthlyFee || 0), 0);
+
   const inEval = contacts.filter(c => c.stage === "curadoria_avaliacao").length;
   const approved = contacts.filter(c => c.stage === "curadoria_aprovado").length;
   const nextMtgs = [...meetings].filter(m => new Date(m.scheduledAt) > now).sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt)).slice(0, 4);
@@ -264,7 +282,7 @@ function Dashboard({ onNav, user }) {
           <p style={S.sectionSub}>{now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button style={S.btnG} onClick={() => onNav("generator")}>{I.generator} Gerar Leads IA</button>
+  
           <button style={S.btnP} onClick={() => onNav("diagnostic")}>{I.diag} Diagnóstico</button>
         </div>
       </div>
@@ -458,14 +476,16 @@ function Leads({ onNav }) {
     const map = new Map();
     leads.forEach(l => {
       const base = stripState(l.city);
-      if (!base) return;
-      const key = norm(base);
+      if (!base || base.trim().length < 2) return;
+      const key = base.trim();
       if (!map.has(key)) {
-        const cityStr = l.city || ""; const stMatch = cityStr.match(/[\-,]\s*([A-Za-z]{2})$/) || cityStr.match(/\/([A-Za-z]{2})$/); const st = l.state || (stMatch ? stMatch[1].toUpperCase() : "") || "";
+        const cityStr = l.city || "";
+        const stMatch = cityStr.match(/[-,]\s*([A-Za-z]{2})$/) || cityStr.match(/\/([A-Za-z]{2})$/);
+        const st = l.state || (stMatch ? stMatch[1].toUpperCase() : "");
         map.set(key, st ? `${base} - ${st}` : base);
       }
     });
-    return [...map.entries()].sort((a,b) => a[1].localeCompare(b[1]));
+    return [...map.entries()].sort((a,b) => a[1].localeCompare(b[1], "pt-BR"));
   }, [leads]);
 
   const specOptions = useMemo(() => {
@@ -478,10 +498,22 @@ function Leads({ onNav }) {
     return [...map.entries()].sort((a,b) => a[1].localeCompare(b[1]));
   }, [leads]);
 
+  const normAccents = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
   const filtered = leads.filter(l => {
-    if (filters.city && norm(stripState(l.city)) !== filters.city) return false;
-    if (filters.spec && norm(l.specialty) !== filters.spec) return false;
-    if (filters.search && !norm(l.name).includes(norm(filters.search))) return false;
+    if (filters.city) {
+      const leadCity = normAccents(stripState(l.city || l.state || ""));
+      const filterCity = normAccents(filters.city);
+      if (!leadCity.includes(filterCity) && !filterCity.includes(leadCity)) return false;
+    }
+    if (filters.spec) {
+      const leadSpec = normAccents(l.specialty || "");
+      const filterSpec = normAccents(filters.spec);
+      if (!leadSpec.includes(filterSpec) && !filterSpec.includes(leadSpec)) return false;
+    }
+    if (filters.search) {
+      const q = normAccents(filters.search);
+      if (!normAccents(l.name).includes(q)) return false;
+    }
     return true;
   });
 
@@ -558,9 +590,9 @@ function Leads({ onNav }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-              {(lead.phone || lead.personalContact) && <a href={`https://wa.me/55${(lead.phone || lead.personalContact || "").replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp} WhatsApp</a>}
-              {lead.email && <a href={`mailto:${lead.email}`} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
-              {lead.instagram && lead.instagram !== "A verificar" && <a href={`https://instagram.com/${lead.instagram.replace("@","")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#833ab4"), textDecoration: "none" }}>{I.ig}</a>}
+              <WppBtn phone={lead.phone || lead.personalContact} />
+              {lead.email && <a href={"mailto:" + lead.email} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
+              {lead.instagram && lead.instagram !== "A verificar" && <a href={"https://instagram.com/" + (lead.instagram||"").replace("@","")} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#833ab4"), textDecoration: "none" }}>{I.ig} Instagram</a>}
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={() => sendToCuration(lead.id)}
@@ -680,7 +712,8 @@ function Curadoria({ onNav }) {
           <p style={S.sectionSub}>
             <span style={{ color: "#F59E0B", fontWeight: 600 }}>{totalAvaliacao} em avaliação</span> ·{" "}
             <span style={{ color: "#10B981", fontWeight: 600 }}>{totalAprovado} aprovados</span> ·{" "}
-            <span style={{ color: "#aaa" }}>{totalReprovado} reprovados no arquivo</span>
+            <span style={{ color: "#aaa" }}>{totalReprovado} reprovados</span>
+            {totalReprovado > 0 && <> · <button style={{ ...S.btnO, height: 20, fontSize: 10, padding: "0 8px" }} onClick={() => onNav("arquivo")}>📁 Ver arquivo →</button></>}
           </p>
         </div>
         <button style={S.btnG} onClick={() => onNav("leads")}>{I.leads} Ver Leads</button>
@@ -778,10 +811,7 @@ function Curadoria({ onNav }) {
         ))}
       </div>
 
-      <div style={{ marginTop: 12, background: "#f7f7f5", borderRadius: 8, padding: "8px 14px", fontSize: 11, color: "#888", display: "flex", alignItems: "center", gap: 8 }}>
-        📁 Reprovados vão para <strong>Arquivo</strong> automaticamente ·{" "}
-        {totalReprovado > 0 && <button style={{ ...S.btnO, height: 24, fontSize: 10 }} onClick={() => onNav("arquivo")}>Ver {totalReprovado} reprovado{totalReprovado !== 1 ? "s" : ""} →</button>}
-      </div>
+
 
       {sel && (
         <div style={S.modal} onClick={() => setSel(null)}>
@@ -931,7 +961,7 @@ function Comercial() {
           const stageIdx = COMMERCIAL_STAGES_ORDER.indexOf(stage);
           return (
             <div key={stage}
-              style={{ background: cfg.bg, borderRadius: 14, border: `1.5px solid ${cfg.border}`, minWidth: 220, flex: "0 0 220px", overflow: "hidden" }}
+              style={{ background: cfg.bg, borderRadius: 14, border: `1.5px solid ${cfg.border}`, minWidth: 260, flex: "0 0 260px", overflow: "hidden" }}
               onDragOver={e => e.preventDefault()}
               onDrop={() => { if (dragging) { setStage(dragging, stage); setDragging(null); } }}>
               <div style={{ padding: "11px 14px 9px", borderBottom: `1.5px solid ${cfg.border}`, display: "flex", alignItems: "center", gap: 8 }}>
@@ -979,12 +1009,9 @@ function Comercial() {
                           🎉 Converter para Membro
                         </button>
                       )}
-                      {item.phone && (
-                        <a href={`https://wa.me/55${item.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-                          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, background: "#f0faf8", color: "#128C7E", border: "1px solid #128C7E22", borderRadius: 6, padding: "5px 0", fontSize: 10, fontWeight: 700, textDecoration: "none", marginTop: 4 }}>
-                          {I.wpp} WhatsApp
-                        </a>
-                      )}
+                      <div style={{ marginTop: 4 }} onClick={e => e.stopPropagation()}>
+                        <WppBtn phone={item.phone || item.personalContact} />
+                      </div>
                       <button onClick={e => { e.stopPropagation(); sendToArchive(item.id); }}
                         style={{ width: "100%", background: "#f7f7f5", color: "#888", border: "1px solid #e5e5e5", borderRadius: 6, padding: "4px 0", fontSize: 10, cursor: "pointer", marginTop: 3 }}>
                         🚫 Sem Interesse
@@ -2048,6 +2075,21 @@ function Arquivo() {
   const filteredRep = reprovados.filter(i => !search || (i.name||"").toLowerCase().includes(search.toLowerCase()) || stripState(i.city||"").toLowerCase().includes(search.toLowerCase()));
   const filteredSem = semInteresse.filter(i => !search || (i.name||"").toLowerCase().includes(search.toLowerCase()) || stripState(i.city||"").toLowerCase().includes(search.toLowerCase()));
 
+  function returnToCuration(item) {
+    const all = DB.get("contacts", []);
+    DB.set("contacts", all.map(c => c.id === item.id ? { ...c, stage: "curadoria_avaliacao" } : c));
+    showToast(item.name + " retornou para Curadoria ✓");
+    setSearch(s => s); // force re-render
+  }
+
+  function deleteContact(item) {
+    if (!confirm("Excluir " + item.name + " permanentemente?")) return;
+    const all = DB.get("contacts", []);
+    DB.set("contacts", all.filter(c => c.id !== item.id));
+    showToast("Contato excluído");
+    setSearch(s => s);
+  }
+
   const TableRow = ({ item, type }) => (
     <tr style={{ borderBottom: "1px solid #f5f5f5" }}>
       <td style={S.td}>
@@ -2065,25 +2107,13 @@ function Arquivo() {
       </td>
       <td style={S.td}>
         <span style={{ fontSize: 11, background: getCityColor(stripState(item.city)) + "20", color: getCityColor(stripState(item.city)), borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>
-          {stripState(item.city)}{item.state ? ` - ${item.state}` : ""}
+          {stripState(item.city)}{item.state ? " - " + item.state : ""}
         </span>
       </td>
       <td style={S.td}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {(item.phone || item.personalContact) && (
-            <a href={`https://wa.me/55${(item.phone || item.personalContact || "").replace(/\D/g,"")}`}
-              target="_blank" rel="noreferrer"
-              style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#128C7E", color: "#fff", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 700, textDecoration: "none", width: "fit-content" }}>
-              {I.wpp} {item.phone || item.personalContact}
-            </a>
-          )}
-          {item.email && (
-            <a href={`mailto:${item.email}`}
-              style={{ display: "inline-flex", alignItems: "center", gap: 4, background: C.azulPetroleo + "15", color: C.azulPetroleo, borderRadius: 6, padding: "3px 8px", fontSize: 11, textDecoration: "none", width: "fit-content" }}>
-              {I.mail} {item.email}
-            </a>
-          )}
-          {!item.phone && !item.personalContact && !item.email && <span style={{ fontSize: 11, color: "#ccc" }}>Sem contato</span>}
+          <WppBtn phone={item.phone || item.personalContact} size="xs" showNumber={true} />
+          {item.email && <a href={"mailto:" + item.email} style={{ fontSize: 10, color: C.azulPetroleo }}>{I.mail} {item.email}</a>}
         </div>
       </td>
       <td style={S.td}>
@@ -2093,6 +2123,18 @@ function Arquivo() {
         <span style={{ background: type === "reprovado" ? "#fff0f0" : "#f7f7f5", color: type === "reprovado" ? "#a32d2d" : "#888", borderRadius: 99, padding: "3px 9px", fontSize: 11, fontWeight: 600 }}>
           {type === "reprovado" ? "Reprovado" : "Sem Interesse"}
         </span>
+      </td>
+      <td style={S.td}>
+        <div style={{ display: "flex", gap: 5 }}>
+          <button onClick={() => returnToCuration(item)}
+            style={{ fontSize: 10, background: "#f0faf4", color: "#0f6e56", border: "1px solid #a7f0d8", borderRadius: 6, padding: "3px 8px", cursor: "pointer", whiteSpace: "nowrap" }}>
+            ↩ Curadoria
+          </button>
+          <button onClick={() => deleteContact(item)}
+            style={{ fontSize: 10, background: "#fff0f0", color: "#a32d2d", border: "1px solid #fca5a5", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>
+            {I.trash}
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -2142,7 +2184,7 @@ function Arquivo() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "#f7f7f5" }}>
-              {["Profissional", "Especialidade", "Cidade", "Contato", "Data", "Status"].map(h => <th key={h} style={S.th}>{h}</th>)}
+              {["Profissional", "Especialidade", "Cidade", "Contato", "Data", "Status", "Ações"].map(h => <th key={h} style={S.th}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -2672,13 +2714,14 @@ function StudioCalendar({ clientFilter, onOpenContent }) {
   const filtered = allContent.filter(c => {
     if (clientFilter && c.clientId !== clientFilter) return false;
     if (!c.date) return false;
-    const d = new Date(c.date);
+    const d = new Date(c.date + "T12:00:00");
     return d.getFullYear() === year && d.getMonth() === month;
   });
 
   const getDay = (day) => filtered.filter(c => {
-    const d = new Date(c.date);
-    return d.getDate() === day;
+    if (!c.date) return false;
+    const d = new Date(c.date + "T12:00:00");
+    return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
   });
 
   return (
@@ -3687,6 +3730,221 @@ function AddContentModal({ form, setForm, clients, campaigns, team, onSave, onCl
   );
 }
 
+// ─── CENTRAL OPERACIONAL ──────────────────────────────────────────────────────
+function CentralOperacional() {
+  const [tasks, setTasks] = useState(() => DB.get("tasks", []));
+  const [showAdd, setShowAdd] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterResp, setFilterResp] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+  const [tab, setTab] = useState("active"); // active | archive
+  const [form, setForm] = useState({ title: "", desc: "", responsible: "", date: "", priority: "media", notes: "", status: "pendente" });
+
+  const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+  const STATUS_CFG = {
+    pendente:    { label: "Pendente",      color: "#EF4444", bg: "#FFF5F5", dot: "🔴" },
+    andamento:   { label: "Em Andamento",  color: "#F59E0B", bg: "#FFFBEB", dot: "🟡" },
+    concluida:   { label: "Concluída",     color: "#10B981", bg: "#F0FDF4", dot: "🟢" },
+  };
+
+  const PRIORITY_CFG = {
+    alta:  { label: "Alta",   color: "#EF4444" },
+    media: { label: "Média",  color: "#F59E0B" },
+    baixa: { label: "Baixa",  color: "#10B981" },
+  };
+
+  const save = t => { setTasks(t); DB.set("tasks", t); };
+
+  const activeTasks = tasks.filter(t => t.status !== "concluida");
+  const archivedTasks = tasks.filter(t => t.status === "concluida");
+
+  const responsibles = [...new Set(tasks.map(t => t.responsible).filter(Boolean))];
+
+  const applyFilters = list => list.filter(t => {
+    if (filterStatus !== "all" && t.status !== filterStatus) return false;
+    if (filterResp && t.responsible !== filterResp) return false;
+    if (filterMonth && t.date) {
+      const d = new Date(t.date + "T12:00");
+      const key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      if (key !== filterMonth) return false;
+    }
+    return true;
+  });
+
+  const displayTasks = applyFilters(tab === "active" ? activeTasks : archivedTasks)
+    .sort((a, b) => {
+      const pOrder = { alta: 0, media: 1, baixa: 2 };
+      return (pOrder[a.priority] || 1) - (pOrder[b.priority] || 1);
+    });
+
+  function addTask() {
+    if (!form.title.trim()) return alert("Título é obrigatório");
+    save([...tasks, { ...form, id: Date.now() + Math.random(), createdAt: new Date().toISOString() }]);
+    setShowAdd(false);
+    setForm({ title: "", desc: "", responsible: "", date: "", priority: "media", notes: "", status: "pendente" });
+    showToast("Tarefa criada ✓");
+  }
+
+  function updateStatus(id, status) {
+    save(tasks.map(t => t.id === id ? { ...t, status, concludedAt: status === "concluida" ? new Date().toISOString() : null } : t));
+    if (status === "concluida") showToast("Tarefa concluída! ✓");
+  }
+
+  function deleteTask(id) {
+    if (!confirm("Excluir esta tarefa?")) return;
+    save(tasks.filter(t => t.id !== id));
+  }
+
+  const pendentes = activeTasks.filter(t => t.status === "pendente").length;
+  const andamento = activeTasks.filter(t => t.status === "andamento").length;
+
+  return (
+    <div>
+      <div style={S.topbar}>
+        <div>
+          <h1 style={S.sectionTitle}>Central Operacional</h1>
+          <p style={S.sectionSub}>
+            <span style={{ color: "#EF4444", fontWeight: 600 }}>{pendentes} pendentes</span> ·{" "}
+            <span style={{ color: "#F59E0B", fontWeight: 600 }}>{andamento} em andamento</span> ·{" "}
+            <span style={{ color: "#aaa" }}>{archivedTasks.length} concluídas</span>
+          </p>
+        </div>
+        <button style={S.btnP} onClick={() => setShowAdd(true)}>{I.plus} Nova tarefa</button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #e5e5e5", marginBottom: 14 }}>
+        {[{ id: "active", label: "Ativas (" + activeTasks.length + ")" }, { id: "archive", label: "Concluídas (" + archivedTasks.length + ")" }].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{ padding: "7px 18px", fontSize: 13, fontWeight: tab === t.id ? 700 : 400, cursor: "pointer", background: "none", border: "none", borderBottom: tab === t.id ? "2px solid " + C.azulPetroleo : "2px solid transparent", color: tab === t.id ? C.azulPetroleo : "#aaa", marginBottom: -1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <select style={{ ...S.select, width: "auto", minWidth: 150, height: 34, fontSize: 12 }}
+          value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+          <option value="all">Todos os status</option>
+          {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.dot} {v.label}</option>)}
+        </select>
+        <select style={{ ...S.select, width: "auto", minWidth: 160, height: 34, fontSize: 12 }}
+          value={filterResp} onChange={e => setFilterResp(e.target.value)}>
+          <option value="">Todos os responsáveis</option>
+          {responsibles.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        {tab === "archive" && (
+          <input type="month" style={{ ...S.input, width: "auto", height: 34, fontSize: 12 }}
+            value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+        )}
+        {(filterStatus !== "all" || filterResp || filterMonth) && (
+          <button style={{ ...S.btnO, height: 30, fontSize: 11 }} onClick={() => { setFilterStatus("all"); setFilterResp(""); setFilterMonth(""); }}>✕ Limpar</button>
+        )}
+        <span style={{ fontSize: 11, color: "#aaa", marginLeft: "auto" }}>{displayTasks.length} tarefa{displayTasks.length !== 1 ? "s" : ""}</span>
+      </div>
+
+      {/* Task grid */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {displayTasks.map(task => {
+          const st = STATUS_CFG[task.status] || STATUS_CFG.pendente;
+          const pr = PRIORITY_CFG[task.priority] || PRIORITY_CFG.media;
+          const isOverdue = task.date && task.status !== "concluida" && new Date(task.date + "T23:59") < new Date();
+          return (
+            <div key={task.id} style={{ ...S.card, padding: "14px 16px", borderLeft: "3px solid " + st.color, opacity: task.status === "concluida" ? 0.7 : 1 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{task.title}</span>
+                    <span style={{ fontSize: 10, background: st.bg, color: st.color, borderRadius: 99, padding: "1px 8px", fontWeight: 600 }}>{st.dot} {st.label}</span>
+                    <span style={{ fontSize: 10, background: pr.color + "15", color: pr.color, borderRadius: 99, padding: "1px 8px", fontWeight: 600 }}>⚡ {pr.label}</span>
+                    {isOverdue && <span style={{ fontSize: 10, background: "#fff0f0", color: "#a32d2d", borderRadius: 99, padding: "1px 8px", fontWeight: 700 }}>⚠ Atrasada</span>}
+                  </div>
+                  {task.desc && <p style={{ fontSize: 12, color: "#555", margin: "0 0 6px", lineHeight: 1.5 }}>{task.desc}</p>}
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: "#888" }}>
+                    {task.responsible && <span>👤 {task.responsible}</span>}
+                    {task.date && <span style={{ color: isOverdue ? "#EF4444" : "#888", fontWeight: isOverdue ? 700 : 400 }}>
+                      📅 {new Date(task.date + "T12:00").toLocaleDateString("pt-BR")}
+                    </span>}
+                    {task.notes && <span>📝 {task.notes}</span>}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  {task.status === "pendente" && (
+                    <button onClick={() => updateStatus(task.id, "andamento")}
+                      style={{ fontSize: 11, background: "#fff9ec", color: "#92400e", border: "1px solid #fde68a", borderRadius: 6, padding: "4px 9px", cursor: "pointer" }}>
+                      🟡 Iniciar
+                    </button>
+                  )}
+                  {task.status === "andamento" && (
+                    <button onClick={() => updateStatus(task.id, "concluida")}
+                      style={{ fontSize: 11, background: "#f0faf4", color: "#0f6e56", border: "1px solid #a7f0d8", borderRadius: 6, padding: "4px 9px", cursor: "pointer", fontWeight: 700 }}>
+                      ✓ Concluir
+                    </button>
+                  )}
+                  {task.status === "concluida" && (
+                    <button onClick={() => updateStatus(task.id, "pendente")}
+                      style={{ fontSize: 11, background: "#f7f7f5", color: "#888", border: "1px solid #e5e5e5", borderRadius: 6, padding: "4px 9px", cursor: "pointer" }}>
+                      ↩ Reabrir
+                    </button>
+                  )}
+                  <button onClick={() => deleteTask(task.id)}
+                    style={{ fontSize: 11, background: "#fff0f0", color: "#a32d2d", border: "1px solid #fca5a5", borderRadius: 6, padding: "4px 7px", cursor: "pointer" }}>
+                    {I.trash}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {displayTasks.length === 0 && (
+          <div style={{ ...S.card, textAlign: "center", padding: "48px 20px", color: "#aaa" }}>
+            <p style={{ fontSize: 32, margin: "0 0 8px" }}>✅</p>
+            <p style={{ margin: 0 }}>{tab === "active" ? "Nenhuma tarefa ativa. Clique em "Nova tarefa" para começar." : "Nenhuma tarefa concluída ainda."}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Add modal */}
+      {showAdd && (
+        <div style={S.modal} onClick={() => setShowAdd(false)}>
+          <div style={{ ...S.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 18px" }}>Nova Tarefa</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+              <div><label style={S.lbl}>Título *</label><input style={S.input} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Ligar para Dr. João" /></div>
+              <div><label style={S.lbl}>Descrição</label><textarea style={{ ...S.input, height: 70, resize: "none" }} value={form.desc} onChange={e => setForm(f => ({ ...f, desc: e.target.value }))} /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div><label style={S.lbl}>Responsável</label><input style={S.input} value={form.responsible} onChange={e => setForm(f => ({ ...f, responsible: e.target.value }))} placeholder="Nome da pessoa" /></div>
+                <div><label style={S.lbl}>Data</label><input type="date" style={S.input} value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></div>
+                <div><label style={S.lbl}>Prioridade</label>
+                  <select style={S.select} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
+                    <option value="alta">🔴 Alta</option>
+                    <option value="media">🟡 Média</option>
+                    <option value="baixa">🟢 Baixa</option>
+                  </select>
+                </div>
+                <div><label style={S.lbl}>Status inicial</label>
+                  <select style={S.select} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                    <option value="pendente">🔴 Pendente</option>
+                    <option value="andamento">🟡 Em Andamento</option>
+                  </select>
+                </div>
+              </div>
+              <div><label style={S.lbl}>Observações</label><input style={S.input} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={S.btnP} onClick={addTask}>Criar tarefa</button>
+              <button style={S.btnO} onClick={() => setShowAdd(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 function Sidebar({ page, onNav, user }) {
   const _sidebarContacts = DB.get("contacts", []);
@@ -3753,11 +4011,12 @@ function Sidebar({ page, onNav, user }) {
 
         {[
           { id: "mapeamento", label: "Mapeamento", icon: I.map },
-          { id: "generator", label: "Gerador de Leads IA", icon: I.generator },
+
           { id: "scripts", label: "Scripts Operacionais", icon: I.scripts },
           { id: "importacao", label: "Importação", icon: I.upload },
           { id: "arquivo", label: "Arquivo", icon: I.arquivo },
-          { id: "diagnostic", label: "Diagnóstico IA", icon: I.diag },
+
+          { id: "central", label: "Central Operacional", icon: I.task },
           { id: "settings", label: "Configurações", icon: I.settings },
         ].map(item => (
           <button key={item.id} style={navItemStyle(page === item.id)} onClick={() => onNav(item.id)}>
@@ -3882,14 +4141,14 @@ function Diagnostic({ onComplete }) {
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [user] = useState({ id: 1, name: "Karine Rodrigues", email: "karine@partic.com.br", role: "admin" });
-  const [showDiag, setShowDiag] = useState(false);
+
   const [page, setPage] = useState("dashboard");
 
   useEffect(() => { initData(); }, []);
   // Diagnostic only shown manually via menu
 
   function handleLogout() { showToast("Logout simulado — login será reativado em breve", "info"); }
-  function navigate(p) { if (p === "diagnostic") { setShowDiag(true); return; } setPage(p); }
+  function navigate(p) { setPage(p); }
 
   if (showDiag) return <Diagnostic onComplete={() => { setShowDiag(false); setPage("dashboard"); }} />;
 
@@ -3903,11 +4162,12 @@ export default function App() {
     anchors: <Anchors />,
     member_pipeline: <MemberPipeline />,
     mapeamento: <Mapeamento onNav={navigate} />,
-    generator: <LeadGenerator onNav={navigate} />,
+
     scripts: <Scripts />,
     importacao: <Importacao onNav={navigate} />,
     arquivo: <Arquivo />,
-    diagnostic: <Diagnostic onComplete={() => setPage("dashboard")} />,
+
+    central: <CentralOperacional />,
     settings: <Settings user={user} onLogout={handleLogout} />,
     studio: <StudioMain subpage="studio" onNav={navigate} />,
     studio_calendar: <StudioMain subpage="studio_calendar" onNav={navigate} />,
