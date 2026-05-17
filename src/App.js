@@ -291,8 +291,7 @@ function Dashboard({ onNav, user }) {
         {[
           { label: "Membros Ativos", value: activeM, sub: `de ${members.length} total`, color: C.azulPetroleo, icon: "👥", page: "members" },
           { label: "Em Curadoria", value: inEval, sub: `${approved} aprovados`, color: "#F59E0B", icon: "🔍", page: "curadoria" },
-          { label: "Em Comercial", value: commercial.length, sub: "no pipeline", color: C.roxo, icon: "💼", page: "comercial" },
-          { label: "Receita Mensal", value: `R$ ${revenue.toLocaleString("pt-BR")}`, sub: `${activeM} membros ativos`, color: C.verdeEscuro, icon: "💰", page: "members" },
+          { label: "Em Comercial", value: commercial.length, sub: "no pipeline", color: C.roxo, icon: "💼", page: "comercial" }`, sub: `${activeM} membros ativos`, color: C.verdeEscuro, icon: "💰", page: "members" },
         ].map(k => (
           <div key={k.label} style={{ ...S.card, borderLeft: `3px solid ${k.color}`, cursor: "pointer" }} onClick={() => onNav(k.page)}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
