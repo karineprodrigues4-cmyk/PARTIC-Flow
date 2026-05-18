@@ -1774,7 +1774,8 @@ function Mapeamento({ onNav }) {
   const members = DB.get("members", []).filter(m => m.status === "active");
 
   const filtered = CIDADES_MAP.filter(c => !search || `${c.n} ${c.e}`.toLowerCase().includes(search.toLowerCase()));
-  const hasAnchor = (n, e) => ANCORAS_MAP.some(a => a.cidade === n && a.e === e) || members.some(m => m.isAnchor && m.city === n);
+  const normCity2 = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s*[\/\-,]\s*[a-z]{2}$/i,"").trim();
+  const hasAnchor = (n, e) => ANCORAS_MAP.some(a => a.cidade === n && a.e === e) || members.some(m => m.isAnchor && normCity2(m.city) === normCity2(n));
 
   return (
     <div>
@@ -1803,7 +1804,8 @@ function Mapeamento({ onNav }) {
                 {filtered.map(c => {
                   const v = calcVagas(c.p);
                   const anc = hasAnchor(c.n, c.e);
-                  const cityMembers = members.filter(m => m.city === c.n).length;
+                  const normCity = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s*[\/\-,]\s*[a-z]{2}$/i,"").trim();
+                  const cityMembers = members.filter(m => normCity(m.city) === normCity(c.n)).length;
                   const isSel = selCity?.n === c.n;
                   return (
                     <tr key={`${c.n}-${c.e}`} onClick={() => setSelCity(isSel ? null : c)}
@@ -1830,10 +1832,12 @@ function Mapeamento({ onNav }) {
 
         {selCity && (() => {
           const v = calcVagas(selCity.p);
-          const cityMembers = members.filter(m => m.city === selCity.n);
-          const getMacroUsed = (esp) => cityMembers.filter(m => m.specialty === esp && !m.subspecialty).length;
-          const getSubUsed = (esp) => cityMembers.filter(m => m.specialty === esp && m.subspecialty).length;
-          const getNmedUsed = (esp) => cityMembers.filter(m => m.specialty === esp).length;
+          const normC = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s*[\/\-,]\s*[a-z]{2}$/i,"").trim();
+          const cityMembers = members.filter(m => normC(m.city) === normC(selCity.n));
+          const normSpec = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+          const getMacroUsed = (esp) => cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp) && !m.subspecialty).length;
+          const getSubUsed = (esp) => cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp) && m.subspecialty).length;
+          const getNmedUsed = (esp) => cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp)).length;
 
           return (
             <div>
