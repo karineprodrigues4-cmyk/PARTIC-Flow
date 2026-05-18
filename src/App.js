@@ -428,10 +428,16 @@ function useContacts() {
 
 
 // ─── LEADS ────────────────────────────────────────────────────────────────────
-function Leads({ onNav }) {
+function Leads({ onNav, initialFilters }) {
   const { contacts, save, moveStage } = useContacts();
 
-  const [filters, setFilters] = useState({ city: "", spec: "", search: "" });
+  const [filters, setFilters] = useState({ city: (initialFilters && initialFilters.city) || "", spec: (initialFilters && initialFilters.spec) || "", search: "" });
+
+  useEffect(() => {
+    if (initialFilters && (initialFilters.city || initialFilters.spec)) {
+      setFilters({ city: initialFilters.city || "", spec: initialFilters.spec || "", search: "" });
+    }
+  }, [initialFilters && initialFilters.city, initialFilters && initialFilters.spec]);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({
     name: "", specialty: "", subspecialty: "", profession: "Medico",
