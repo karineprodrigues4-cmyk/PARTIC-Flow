@@ -1784,7 +1784,6 @@ function Mapeamento({ onNav }) {
           <h1 style={S.sectionTitle}>Mapeamento de Vagas</h1>
           <p style={S.sectionSub}>Vagas por cidade e especialidade · proporcionais a Ribeirão Preto</p>
         </div>
-        <button style={S.btnG} onClick={() => onNav("generator")}>{I.generator} Gerar Leads para cidade</button>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr 1.4fr" : "1fr", gap: 16 }}>
@@ -1904,16 +1903,36 @@ function Mapeamento({ onNav }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {VAGAS_CONFIG.naoMedicas.map(esp => {
                     const used = getNmedUsed(esp);
-                    const livre = Math.max(0, v.nmed - used);
+                    const livre = Math.max(0, v.naoMed - used);
+                    const membersInEsp = cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp));
                     return (
-                      <div key={esp} style={{ background: "#fafafa", borderRadius: 7, padding: "6px 10px", border: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, flex: 1 }}>{esp}</span>
-                        <div style={{ width: 80, height: 4, background: "#f0f0f0", borderRadius: 99 }}>
-                          <div style={{ height: "100%", background: livre === 0 ? "#EF4444" : C.verdeMedio, borderRadius: 99, width: `${Math.min(100, (used / v.nmed) * 100)}%` }} />
+                      <div key={esp} style={{ background: "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid #f0f0f0" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
+                            {livre > 0 && (
+                              <button onClick={() => onNav && onNav("leads", { city: selCity.n, spec: esp })}
+                                style={{ fontSize: 10, background: C.azulPetroleo + "15", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "30", borderRadius: 99, padding: "2px 8px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                🔍 Ver Leads
+                              </button>
+                            )}
+                          </div>
+                          <span style={{ fontSize: 11, color: livre === 0 ? "#EF4444" : "#aaa", fontWeight: livre === 0 ? 700 : 400 }}>
+                            {used}/{v.naoMed} {livre === 0 ? "✓ COMPLETO" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
+                          </span>
                         </div>
-                        <span style={{ fontSize: 10, color: livre === 0 ? "#EF4444" : "#aaa", fontWeight: livre === 0 ? 700 : 400, minWidth: 60, textAlign: "right" }}>
-                          {used}/{v.nmed} {livre === 0 ? "CHEIO" : `(${livre} livre${livre !== 1 ? "s" : ""})`}
-                        </span>
+                        <div style={{ width: "100%", height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: membersInEsp.length > 0 ? 6 : 0 }}>
+                          <div style={{ height: "100%", background: livre === 0 ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: Math.min(100, (used / v.naoMed) * 100) + "%" }} />
+                        </div>
+                        {membersInEsp.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                            {membersInEsp.map(m => (
+                              <span key={m.id} style={{ fontSize: 10, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 99, padding: "2px 7px", color: "#555" }}>
+                                {m.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
