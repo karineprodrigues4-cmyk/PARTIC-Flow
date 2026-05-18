@@ -451,13 +451,14 @@ function Leads({ onNav }) {
   // Only contacts with stage = "lead", deduplicated by name
   const leads = contacts.filter(c => c.stage === "lead");
 
-  // Unique cities from leads
+  // Unique cities from leads (normalized dedup, original display)
   const cityOptions = [];
   const seenCities = new Set();
   leads.forEach(l => {
     const city = stripSuffix(l.city || "").trim();
     if (!city || city.length < 2) return;
-    const key = city.toLowerCase();
+    // Use normalized key for dedup to avoid duplicates from accent differences
+    const key = city.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     if (seenCities.has(key)) return;
     seenCities.add(key);
     const st = (l.state || "").toUpperCase();
@@ -465,28 +466,35 @@ function Leads({ onNav }) {
   });
   cityOptions.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
-  // Unique specialties from leads
+  // Unique specialties from leads (normalized dedup)
   const specOptions = [];
   const seenSpecs = new Set();
   leads.forEach(l => {
     const spec = (l.specialty || "").trim();
     if (!spec) return;
-    const key = spec.toLowerCase();
+    const key = spec.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     if (seenSpecs.has(key)) return;
     seenSpecs.add(key);
     specOptions.push({ value: spec, label: spec });
   });
   specOptions.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
-  // Apply filters with exact match
+  // Normalize: remove accents for comparison
+  const normalize = s => (s || "").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+  // Apply filters with normalized comparison
   const filtered = leads.filter(l => {
     if (filters.city) {
-      const leadCity = stripSuffix(l.city || "").trim().toLowerCase();
-      if (leadCity !== filters.city.toLowerCase()) return false;
+      const leadCity = normalize(stripSuffix(l.city || ""));
+      const filterCity = normalize(filters.city);
+      if (leadCity !== filterCity) return false;
     }
     if (filters.spec) {
-      const leadSpec = (l.specialty || "").trim().toLowerCase();
-      if (leadSpec !== filters.spec.toLowerCase()) return false;
+      const leadSpec = normalize(l.specialty || "");
+      const filterSpec = normalize(filters.spec);
+      if (leadSpec !== filterSpec) return false;
     }
     if (filters.search) {
       const q = filters.search.toLowerCase();
