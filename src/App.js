@@ -277,11 +277,11 @@ function Dashboard({ onNav, user }) {
           <div key={k.label} style={{ ...S.card, borderLeft: `3px solid ${k.color}`, cursor: "pointer" }} onClick={() => onNav(k.page)}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <p style={{ fontSize: 11, color: "#888", margin: "0 0 4px" }}>{k.label}</p>
+                <p style={{ fontSize: 13, color: "#888", margin: "0 0 5px" }}>{k.label}</p>
                 <p style={{ fontSize: 22, fontWeight: 800, color: k.color, margin: "0 0 2px", lineHeight: 1 }}>{k.value}</p>
-                <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{k.sub}</p>
+                <p style={{ fontSize: 12, color: "#aaa", margin: 0 }}>{k.sub}</p>
               </div>
-              <span style={{ fontSize: 22 }}>{k.icon}</span>
+              <span style={{ fontSize: 26 }}>{k.icon}</span>
             </div>
           </div>
         ))}
@@ -306,7 +306,7 @@ function Dashboard({ onNav, user }) {
           ))}
         </div>
         <div style={S.card}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 12px" }}>Por Especialidade</h3>
+          <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 14px" }}>Por Especialidade</h3>
           {topSpecs.map(([spec, count]) => (
             <div key={spec} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
               <span style={{ fontSize: 11, color: "#555", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{spec}</span>
@@ -315,7 +315,7 @@ function Dashboard({ onNav, user }) {
           ))}
         </div>
         <div style={S.card}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 12px" }}>Próximas Reuniões</h3>
+          <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 14px" }}>Próximas Reuniões</h3>
           {nextMtgs.length > 0 ? nextMtgs.map(m => {
             const d = new Date(m.scheduledAt);
             return (
