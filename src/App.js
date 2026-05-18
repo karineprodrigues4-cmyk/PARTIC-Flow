@@ -4573,13 +4573,14 @@ export default function App() {
   // Diagnostic only shown manually via menu
 
   function handleLogout() { showToast("Logout simulado — login será reativado em breve", "info"); }
-  function navigate(p) { setPage(p); }
+  const [navParams, setNavParams] = useState({});
+  function navigate(p, params) { setPage(p); setNavParams(params || {}); }
 
 
 
   const PAGES = {
     dashboard: <Dashboard onNav={navigate} user={user} />,
-    leads: <Leads onNav={navigate} />,
+    leads: <Leads onNav={navigate} initialFilters={navParams} />,
     curadoria: <Curadoria onNav={navigate} />,
     comercial: <Comercial />,
     calendar: <CalendarPage />,
