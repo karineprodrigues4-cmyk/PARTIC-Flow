@@ -879,15 +879,153 @@ function Curadoria({ onNav }) {
 }
 
 
+
 // ─── COMERCIAL ────────────────────────────────────────────────────────────────
-const COMMERCIAL_STAGES_ORDER = ["comercial_prospecto","comercial_aguardando","comercial_reuniao","comercial_negociacao","comercial_fechou"];
-const COMMERCIAL_STAGE_CFG = {
-  comercial_prospecto:   { label: "Prospecto",          color: "#3B82F6", bg: "#EFF6FF", border: "#BFDBFE" },
-  comercial_aguardando:  { label: "Aguardando Resposta", color: "#8B5CF6", bg: "#F5F3FF", border: "#DDD6FE" },
-  comercial_reuniao:     { label: "Reunião Agendada",   color: "#F97316", bg: "#FFF7ED", border: "#FED7AA" },
-  comercial_negociacao:  { label: "Negociação",         color: "#EF4444", bg: "#FFF5F5", border: "#FECACA" },
-  comercial_fechou:      { label: "Fechou! 🎉",         color: "#10B981", bg: "#F0FDF4", border: "#A7F3D0" },
+const COMMERCIAL_STAGES = ["comercial_prospecto","comercial_aguardando","comercial_reuniao","comercial_negociacao","comercial_fechou"];
+const COMMERCIAL_CFG = {
+  comercial_prospecto:  { label: "Prospecto",           color: "#3B82F6", bg: "#EFF6FF", border: "#BFDBFE" },
+  comercial_aguardando: { label: "Aguardando Resposta",  color: "#8B5CF6", bg: "#F5F3FF", border: "#DDD6FE" },
+  comercial_reuniao:    { label: "Reuniao Agendada",     color: "#F97316", bg: "#FFF7ED", border: "#FED7AA" },
+  comercial_negociacao: { label: "Negociacao",           color: "#EF4444", bg: "#FFF5F5", border: "#FECACA" },
+  comercial_fechou:     { label: "Fechou!",              color: "#10B981", bg: "#F0FDF4", border: "#A7F3D0" },
 };
+
+function MeetingModal({ contact, onSave, onClose }) {
+  const [form, setForm] = useState({
+    meetingDate: contact.meetingDate || "",
+    meetingTime: contact.meetingTime || "",
+    meetingType: contact.meetingType || "online",
+    meetingLink: contact.meetingLink || "",
+    meetingAddress: contact.meetingAddress || "",
+    meetingNotes: contact.meetingNotes || "",
+  });
+
+  function save() {
+    if (!form.meetingDate) return alert("Informe a data da reuniao");
+    onSave(form);
+  }
+
+  return (
+    <div style={S.modal} onClick={onClose}>
+      <div style={{ ...S.modalBox, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px" }}>Detalhes da Reuniao</h3>
+        <p style={{ fontSize: 12, color: "#888", margin: "0 0 18px" }}>{contact.name}</p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+          <div>
+            <label style={S.lbl}>Data</label>
+            <input type="date" style={S.input} value={form.meetingDate} onChange={e => setForm(f => ({ ...f, meetingDate: e.target.value }))} />
+          </div>
+          <div>
+            <label style={S.lbl}>Horario</label>
+            <input type="time" style={S.input} value={form.meetingTime} onChange={e => setForm(f => ({ ...f, meetingTime: e.target.value }))} />
+          </div>
+          <div style={{ gridColumn: "1/-1" }}>
+            <label style={S.lbl}>Formato</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["online", "presencial"].map(t => (
+                <button key={t} onClick={() => setForm(f => ({ ...f, meetingType: t }))}
+                  style={{ flex: 1, padding: "8px", fontSize: 13, fontWeight: form.meetingType === t ? 700 : 400, borderRadius: 8, border: form.meetingType === t ? "2px solid " + C.azulPetroleo : "1px solid #ddd", background: form.meetingType === t ? C.azulPetroleo + "10" : "#fff", cursor: "pointer", color: form.meetingType === t ? C.azulPetroleo : "#555" }}>
+                  {t === "online" ? "💻 Online" : "📍 Presencial"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {form.meetingType === "online" && (
+            <div style={{ gridColumn: "1/-1" }}>
+              <label style={S.lbl}>Link da reuniao</label>
+              <input style={S.input} placeholder="https://meet.google.com/..." value={form.meetingLink} onChange={e => setForm(f => ({ ...f, meetingLink: e.target.value }))} />
+            </div>
+          )}
+          {form.meetingType === "presencial" && (
+            <div style={{ gridColumn: "1/-1" }}>
+              <label style={S.lbl}>Endereco</label>
+              <input style={S.input} placeholder="Rua, numero, cidade..." value={form.meetingAddress} onChange={e => setForm(f => ({ ...f, meetingAddress: e.target.value }))} />
+            </div>
+          )}
+          <div style={{ gridColumn: "1/-1" }}>
+            <label style={S.lbl}>Observacoes</label>
+            <textarea style={{ ...S.input, height: 60, resize: "none" }} value={form.meetingNotes} onChange={e => setForm(f => ({ ...f, meetingNotes: e.target.value }))} />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={S.btnP} onClick={save}>Salvar reuniao</button>
+          <button style={S.btnO} onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactDetailModal({ contact, onClose, onStageChange, onArchive, onConvert, onSaveMeeting }) {
+  const stripState = c => (c||"").replace(/\s*[-\/,]\s*[A-Za-z]{2}$/, "").trim();
+  const cfg = COMMERCIAL_CFG[contact.stage] || COMMERCIAL_CFG.comercial_prospecto;
+  const [showMeeting, setShowMeeting] = useState(false);
+
+  return (
+    <div style={S.modal} onClick={onClose}>
+      <div style={{ ...S.modalBox, maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid #f0f0f0" }}>
+          <Avatar name={contact.name} size={46} city={stripState(contact.city)} />
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 2px" }}>{contact.name}</h3>
+            <p style={{ fontSize: 12, color: "#888", margin: 0 }}>{contact.specialty} · {stripState(contact.city)}</p>
+          </div>
+          <button style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: 18 }} onClick={onClose}>{I.x}</button>
+        </div>
+
+        <p style={{ fontSize: 11, color: "#888", margin: "0 0 8px", fontWeight: 700, textTransform: "uppercase" }}>Mover para etapa:</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 16 }}>
+          {COMMERCIAL_STAGES.map(k => {
+            const v = COMMERCIAL_CFG[k];
+            const isCurrent = contact.stage === k;
+            return (
+              <button key={k} onClick={() => { onStageChange(contact.id, k); onClose(); }}
+                style={{ background: isCurrent ? v.color + "20" : "#f7f7f5", color: isCurrent ? v.color : "#555", border: "1px solid " + (isCurrent ? v.color + "44" : "#e5e5e5"), borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: isCurrent ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
+                {isCurrent ? "● " : "○ "}{v.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {contact.stage === "comercial_reuniao" && (
+          <div style={{ background: "#FFF7ED", borderRadius: 10, padding: "12px 14px", marginBottom: 14, border: "1px solid #FED7AA" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#92400e" }}>📅 Reuniao Agendada</span>
+              <button onClick={() => setShowMeeting(true)} style={{ fontSize: 11, background: "#F97316", color: "#fff", border: "none", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>Editar</button>
+            </div>
+            {contact.meetingDate ? (
+              <div style={{ fontSize: 12, color: "#555" }}>
+                <div>📆 {new Date(contact.meetingDate + "T12:00").toLocaleDateString("pt-BR")} {contact.meetingTime ? "as " + contact.meetingTime : ""}</div>
+                <div>{contact.meetingType === "online" ? "💻 Online" : "📍 Presencial"}</div>
+                {contact.meetingLink && <div style={{ wordBreak: "break-all" }}>🔗 {contact.meetingLink}</div>}
+                {contact.meetingAddress && <div>📍 {contact.meetingAddress}</div>}
+                {contact.meetingNotes && <div>📝 {contact.meetingNotes}</div>}
+              </div>
+            ) : (
+              <button onClick={() => setShowMeeting(true)} style={{ ...S.btnO, fontSize: 11, height: 28 }}>+ Adicionar detalhes</button>
+            )}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <WppBtn phone={contact.phone || contact.personalContact} />
+          {contact.email && <a href={"mailto:" + contact.email} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
+          {contact.stage === "comercial_fechou" && (
+            <button style={S.btnG} onClick={() => { onConvert(contact); onClose(); }}>Converter para Membro</button>
+          )}
+          <button style={S.btnD} onClick={() => { onArchive(contact.id); onClose(); }}>Sem Interesse</button>
+        </div>
+
+        {showMeeting && (
+          <MeetingModal contact={contact} onClose={() => setShowMeeting(false)}
+            onSave={data => { onSaveMeeting(contact.id, data); setShowMeeting(false); }} />
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Comercial() {
   const { contacts, save, moveStage } = useContacts();
@@ -896,64 +1034,85 @@ function Comercial() {
   const [dragging, setDragging] = useState(null);
   const [sel, setSel] = useState(null);
 
-  const norm = s => (s||"").toLowerCase().trim();
-  const stripState = c => (c||"").replace(/[\s]*[-,][\s]*[A-Za-z]{2}$/, "").replace(/\/[A-Za-z]{2}$/, "").trim();
+  const stripState = c => (c||"").replace(/\s*[-\/,]\s*[A-Za-z]{2}$/, "").trim();
 
-  // ONLY active commercial contacts (not sem_interesse)
-  const commercialContacts = contacts.filter(c => 
-    COMMERCIAL_STAGES_ORDER.includes(c.stage)
-  );
-
+  const commercialContacts = contacts.filter(c => COMMERCIAL_STAGES.includes(c.stage));
   const cities = [...new Set(commercialContacts.map(c => stripState(c.city)).filter(Boolean))].sort();
-  const specs  = [...new Set(commercialContacts.map(c => (c.specialty||"").trim()).filter(Boolean))].sort();
+  const specs = [...new Set(commercialContacts.map(c => (c.specialty||"").trim()).filter(Boolean))].sort();
 
+  const norm = s => (s||"").toLowerCase().trim();
   const applyFilters = list => list.filter(c => {
     if (cityFilter && norm(stripState(c.city)) !== norm(cityFilter)) return false;
     if (specFilter && norm(c.specialty) !== norm(specFilter)) return false;
     return true;
   });
 
-  const cols = COMMERCIAL_STAGES_ORDER.reduce((acc, stage) => {
+  const cols = COMMERCIAL_STAGES.reduce((acc, stage) => {
     acc[stage] = applyFilters(commercialContacts.filter(c => c.stage === stage));
     return acc;
   }, {});
 
   function advanceStage(id, currentStage) {
-    const idx = COMMERCIAL_STAGES_ORDER.indexOf(currentStage);
-    if (idx < COMMERCIAL_STAGES_ORDER.length - 1) {
-      moveStage(id, COMMERCIAL_STAGES_ORDER[idx + 1]);
-      if (sel?.id === id) setSel(prev => ({ ...prev, stage: COMMERCIAL_STAGES_ORDER[idx + 1] }));
+    const idx = COMMERCIAL_STAGES.indexOf(currentStage);
+    if (idx < COMMERCIAL_STAGES.length - 1) {
+      const nextStage = COMMERCIAL_STAGES[idx + 1];
+      moveStage(id, nextStage);
+      if (sel?.id === id) setSel(prev => ({ ...prev, stage: nextStage }));
     }
   }
 
   function setStage(id, newStage) {
     moveStage(id, newStage);
-    if (sel?.id === id) setSel(prev => ({ ...prev, stage: newStage }));
-    showToast(`Movido para ${COMMERCIAL_STAGE_CFG[newStage]?.label || newStage} ✓`);
+    showToast("Movido para " + (COMMERCIAL_CFG[newStage]?.label || newStage));
+  }
+
+  function saveMeeting(id, data) {
+    const updated = contacts.map(c => c.id === id ? { ...c, ...data } : c);
+    save(updated);
+    if (sel?.id === id) setSel(prev => ({ ...prev, ...data }));
+    // Also save to meetings calendar
+    const meetings = DB.get("meetings", []);
+    const meetingId = "comercial_" + id;
+    const existingIdx = meetings.findIndex(m => m.id === meetingId);
+    const contact = contacts.find(c => c.id === id);
+    const meetingEntry = {
+      id: meetingId,
+      title: "Reuniao - " + (contact?.name || ""),
+      date: data.meetingDate,
+      time: data.meetingTime,
+      type: data.meetingType,
+      link: data.meetingLink,
+      address: data.meetingAddress,
+      notes: data.meetingNotes,
+      contactId: id,
+      color: COMMERCIAL_CFG.comercial_reuniao.color,
+    };
+    if (existingIdx >= 0) meetings[existingIdx] = meetingEntry;
+    else meetings.push(meetingEntry);
+    DB.set("meetings", meetings);
+    showToast("Reuniao salva no calendario!");
   }
 
   function sendToArchive(id) {
     moveStage(id, "comercial_sem_interesse");
-    setSel(null);
-    showToast("Movido para Arquivo — Sem Interesse", "info");
+    if (sel?.id === id) setSel(null);
+    showToast("Movido para Arquivo");
   }
 
   function convertToMember(contact) {
     const members = DB.get("members", []);
     const newMember = {
       id: Date.now() + Math.random(),
-      name: contact.name, profession: contact.profession || "Médico",
-      specialty: contact.specialty, subspecialty: contact.subspecialty,
-      city: stripState(contact.city), state: contact.state,
-      personalContact: contact.phone, schedulingContact: "",
-      email: contact.email, instagram: contact.instagram,
-      status: "active", monthlyFee: 297,
-      joinedAt: new Date().toISOString(), isAnchor: false, notes: "",
+      name: contact.name, profession: contact.profession || "Medico",
+      specialty: contact.specialty, city: stripState(contact.city),
+      state: contact.state, personalContact: contact.phone || contact.personalContact,
+      schedulingContact: contact.schedulingContact, email: contact.email,
+      instagram: contact.instagram, status: "active", monthlyFee: 297,
+      joinedAt: new Date().toISOString(), isAnchor: false,
     };
     DB.set("members", [...members, newMember]);
     moveStage(contact.id, "membro");
-    setSel(null);
-    showToast("🎉 Convertido para Membro!");
+    showToast("Convertido para Membro!");
   }
 
   const totalFechou = contacts.filter(c => c.stage === "comercial_fechou").length;
@@ -968,7 +1127,7 @@ function Comercial() {
           <p style={S.sectionSub}>
             {totalActive} ativos ·{" "}
             <span style={{ color: "#10B981", fontWeight: 600 }}>{totalFechou} fechados</span> ·{" "}
-            <span style={{ background: conversao >= 20 ? "#f0faf4" : "#fef9ec", color: conversao >= 20 ? "#0f6e56" : "#92400e", borderRadius: 99, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{conversao}% conversão</span>
+            <span style={{ background: conversao >= 20 ? "#f0faf4" : "#fef9ec", color: conversao >= 20 ? "#0f6e56" : "#92400e", borderRadius: 99, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{conversao}% conversao</span>
           </p>
         </div>
       </div>
@@ -984,69 +1143,75 @@ function Comercial() {
           <option value="">Todas especialidades</option>
           {specs.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        {(cityFilter || specFilter) && <button style={{ ...S.btnO, fontSize: 11, height: 30 }} onClick={() => { setCityFilter(""); setSpecFilter(""); }}>✕ Limpar</button>}
+        {(cityFilter || specFilter) && (
+          <button style={{ ...S.btnO, fontSize: 11, height: 30 }} onClick={() => { setCityFilter(""); setSpecFilter(""); }}>x Limpar</button>
+        )}
       </div>
 
-      <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 10, alignItems: "flex-start" }}>
-        {COMMERCIAL_STAGES_ORDER.map(stage => {
-          const cfg = COMMERCIAL_STAGE_CFG[stage];
-          const stageIdx = COMMERCIAL_STAGES_ORDER.indexOf(stage);
+      <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 12, alignItems: "flex-start" }}>
+        {COMMERCIAL_STAGES.map(stage => {
+          const cfg = COMMERCIAL_CFG[stage];
+          const stageIdx = COMMERCIAL_STAGES.indexOf(stage);
           return (
             <div key={stage}
-              style={{ background: cfg.bg, borderRadius: 14, border: `1.5px solid ${cfg.border}`, minWidth: 260, flex: "0 0 260px", overflow: "hidden" }}
+              style={{ background: cfg.bg, borderRadius: 14, border: "1.5px solid " + cfg.border, minWidth: 260, flex: "0 0 260px", overflow: "hidden" }}
               onDragOver={e => e.preventDefault()}
               onDrop={() => { if (dragging) { setStage(dragging, stage); setDragging(null); } }}>
-              <div style={{ padding: "11px 14px 9px", borderBottom: `1.5px solid ${cfg.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ padding: "12px 14px 10px", borderBottom: "1.5px solid " + cfg.border, display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 10, height: 10, borderRadius: "50%", background: cfg.color }} />
                 <span style={{ fontWeight: 700, fontSize: 12, color: cfg.color, flex: 1 }}>{cfg.label}</span>
-                <span style={{ background: cfg.color, color: "#fff", borderRadius: 99, padding: "1px 8px", fontSize: 11, fontWeight: 800 }}>{cols[stage].length}</span>
+                <span style={{ background: cfg.color, color: "#fff", borderRadius: 99, padding: "2px 9px", fontSize: 11, fontWeight: 800 }}>{cols[stage].length}</span>
               </div>
-              <div style={{ padding: "8px 8px 10px", maxHeight: 500, overflowY: "auto", display: "flex", flexDirection: "column", gap: 7 }}>
+              <div style={{ padding: "8px 8px 10px", maxHeight: 520, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
                 {cols[stage].map(item => {
                   const cityColor = getCityColor(stripState(item.city));
-                  const nextStage = COMMERCIAL_STAGES_ORDER[stageIdx + 1];
-                  const nextCfg = nextStage ? COMMERCIAL_STAGE_CFG[nextStage] : null;
+                  const nextStage = COMMERCIAL_STAGES[stageIdx + 1];
+                  const nextCfg = nextStage ? COMMERCIAL_CFG[nextStage] : null;
+                  const hasMeeting = item.meetingDate;
                   return (
                     <div key={item.id}
                       draggable onDragStart={() => setDragging(item.id)} onDragEnd={() => setDragging(null)}
                       onClick={() => setSel(item)}
-                      style={{ background: "#fff", borderRadius: 10, border: `1px solid ${cityColor}25`, borderLeft: `3px solid ${cityColor}`, padding: "10px 11px", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                      <span style={{ fontSize: 10, background: cityColor+"15", color: cityColor, borderRadius: 99, padding: "2px 7px", fontWeight: 700, display: "inline-block", marginBottom: 6 }}>📍 {stripState(item.city)}</span>
+                      style={{ background: "#fff", borderRadius: 10, border: "1px solid " + cityColor + "25", borderLeft: "3px solid " + cityColor, padding: "10px 12px", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                      <span style={{ fontSize: 10, background: cityColor + "15", color: cityColor, borderRadius: 99, padding: "2px 7px", fontWeight: 700, display: "inline-block", marginBottom: 6 }}>
+                        📍 {stripState(item.city)}
+                      </span>
                       <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
-                        <Avatar name={item.name} size={28} city={stripState(item.city)} />
+                        <Avatar name={item.name} size={30} city={stripState(item.city)} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 12, fontWeight: 700, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
                           <p style={{ fontSize: 11, color: "#666", margin: 0 }}>{item.specialty}</p>
                         </div>
                       </div>
-                      {/* Only advance button — no going back */}
-                      {stage === "comercial_reuniao" && (
-                        <div onClick={e => e.stopPropagation()} style={{ marginBottom: 4 }}>
-                          <input type="datetime-local"
-                            value={item.meetingDate || ""}
-                            onChange={e => { e.stopPropagation(); moveStage(item.id, "comercial_reuniao", { meetingDate: e.target.value }); }}
-                            style={{ width: "100%", fontSize: 10, padding: "4px 6px", border: "1px solid #FED7AA", borderRadius: 6, background: "#FFF7ED", color: "#92400e" }} />
-                          {item.meetingDate && <div style={{ fontSize: 9, color: "#F97316", marginTop: 2, fontWeight: 700 }}>📅 {new Date(item.meetingDate).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" })}</div>}
+                      {stage === "comercial_reuniao" && hasMeeting && (
+                        <div style={{ fontSize: 10, background: "#FFF7ED", color: "#92400e", borderRadius: 6, padding: "3px 7px", marginBottom: 5, fontWeight: 600 }}>
+                          📅 {new Date(item.meetingDate + "T12:00").toLocaleDateString("pt-BR")} {item.meetingTime ? "as " + item.meetingTime : ""}
+                          {item.meetingType === "online" ? " · 💻 Online" : " · 📍 Presencial"}
+                        </div>
+                      )}
+                      {stage === "comercial_reuniao" && !hasMeeting && (
+                        <div style={{ fontSize: 10, background: "#fff9ec", color: "#92400e", borderRadius: 6, padding: "3px 7px", marginBottom: 5 }}>
+                          ⚠ Clique para agendar detalhes
                         </div>
                       )}
                       {nextCfg && (
                         <button onClick={e => { e.stopPropagation(); advanceStage(item.id, stage); }}
-                          style={{ width: "100%", background: nextCfg.color+"15", color: nextCfg.color, border: `1px solid ${nextCfg.color}30`, borderRadius: 6, padding: "5px 0", fontSize: 10, fontWeight: 700, cursor: "pointer", marginBottom: 4 }}>
+                          style={{ width: "100%", background: nextCfg.color + "15", color: nextCfg.color, border: "1px solid " + nextCfg.color + "30", borderRadius: 6, padding: "5px 0", fontSize: 10, fontWeight: 700, cursor: "pointer", marginBottom: 4 }}>
                           → {nextCfg.label}
                         </button>
                       )}
                       {stage === "comercial_fechou" && (
                         <button onClick={e => { e.stopPropagation(); convertToMember(item); }}
-                          style={{ width: "100%", background: "#f0faf4", color: "#0f6e56", border: "1px solid #a7f0d8", borderRadius: 6, padding: "5px 0", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
-                          🎉 Converter para Membro
+                          style={{ width: "100%", background: "#f0faf4", color: "#0f6e56", border: "1px solid #a7f0d8", borderRadius: 6, padding: "5px 0", fontSize: 10, fontWeight: 700, cursor: "pointer", marginBottom: 4 }}>
+                          Converter para Membro
                         </button>
                       )}
-                      <div style={{ marginTop: 4 }} onClick={e => e.stopPropagation()}>
+                      <div onClick={e => e.stopPropagation()}>
                         <WppBtn phone={item.phone || item.personalContact} />
                       </div>
                       <button onClick={e => { e.stopPropagation(); sendToArchive(item.id); }}
-                        style={{ width: "100%", background: "#f7f7f5", color: "#888", border: "1px solid #e5e5e5", borderRadius: 6, padding: "4px 0", fontSize: 10, cursor: "pointer", marginTop: 3 }}>
-                        🚫 Sem Interesse
+                        style={{ width: "100%", background: "#f7f7f5", color: "#888", border: "1px solid #e5e5e5", borderRadius: 6, padding: "4px 0", fontSize: 10, cursor: "pointer", marginTop: 4 }}>
+                        Sem Interesse
                       </button>
                     </div>
                   );
@@ -1059,43 +1224,14 @@ function Comercial() {
       </div>
 
       {sel && (
-        <div style={S.modal} onClick={() => setSel(null)}>
-          <div style={S.modalBox} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-              <Avatar name={sel.name} size={46} city={stripState(sel.city)} />
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 2px" }}>{sel.name}</h3>
-                <p style={{ fontSize: 12, color: "#888", margin: 0 }}>{sel.specialty} · {stripState(sel.city)}</p>
-              </div>
-              <button style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#aaa" }} onClick={() => setSel(null)}>{I.x}</button>
-            </div>
-
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#888", margin: "0 0 10px", textTransform: "uppercase" }}>Etapa atual: <span style={{ color: COMMERCIAL_STAGE_CFG[sel.stage]?.color }}>{COMMERCIAL_STAGE_CFG[sel.stage]?.label}</span></p>
-            
-            {/* Stage selector — allows manual override but clearly labeled */}
-            <p style={{ fontSize: 10, color: "#aaa", margin: "0 0 8px" }}>Mover manualmente para:</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 14 }}>
-              {COMMERCIAL_STAGES_ORDER.map(k => {
-                const v = COMMERCIAL_STAGE_CFG[k];
-                const isCurrent = sel.stage === k;
-                return (
-                  <button key={k} onClick={() => setStage(sel.id, k)}
-                    style={{ background: isCurrent ? v.color+"20" : "#f7f7f5", color: isCurrent ? v.color : "#555", border: `1px solid ${isCurrent ? v.color+"44" : "#e5e5e5"}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: isCurrent ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
-                    {isCurrent ? "● " : "○ "}{v.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {(sel.phone || sel.personalContact) && <a href={`https://wa.me/55${(sel.phone || sel.personalContact || "").replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp} WhatsApp</a>}
-              {sel.email && <a href={`mailto:${sel.email}`} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
-              {sel.stage === "comercial_fechou" && <button style={S.btnG} onClick={() => convertToMember(sel)}>🎉 Converter para Membro</button>}
-              <button style={S.btnD} onClick={() => sendToArchive(sel.id)}>🗃️ Sem Interesse → Arquivo</button>
-            </div>
-          </div>
-        </div>
-      )}
+        <ContactDetailModal
+          contact={sel}
+          onClose={() => setSel(null)}
+          onStageChange={(id, stage) => { setStage(id, stage); setSel(prev => ({ ...prev, stage })); }}
+          onArchive={sendToArchive}
+          onConvert={convertToMember}
+          onSaveMeeting={(id, data) => { saveMeeting(id, data); setSel(prev => ({ ...prev, ...data })); }}
+        />
       )}
     </div>
   );
