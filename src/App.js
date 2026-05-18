@@ -574,7 +574,7 @@ function Leads({ onNav }) {
           const city = stripSuffix(lead.city || "");
           const st = (lead.state || "").toUpperCase();
           const cityDisplay = city ? (st ? city + " - " + st : city) : "";
-          const phone = lead.phone || lead.personalContact || "";
+          const phone = lead.schedulingContact || lead.personalContact || lead.phone || "";
           const ig = (lead.instagram || "").replace("@", "");
 
           return (
@@ -2226,24 +2226,24 @@ function Arquivo() {
 // ─── IMPORTAÇÃO ───────────────────────────────────────────────────────────────
 const FIELD_MAP = {
   name: ["nome","name","nome completo","nome do profissional","profissional"],
-  specialty: ["especialidade","specialty","area","área"],
-  subspecialty: ["subespecialidade","subspecialty","sub especialidade"],
-  profession: ["profissão","profession","categoria","tipo"],
-  city: ["cidade","city","município","municipio","cidade-estado"],
+  specialty: ["especialidade","specialty","area","area","especialidade medica"],
+  subspecialty: ["subespecialidade","subspecialty","sub especialidade","sub-especialidade"],
+  profession: ["profissao","profissão","profession","categoria","tipo"],
+  city: ["cidade","city","municipio","município","cidade-estado","cidade/estado"],
   state: ["estado","state","uf"],
-  personalContact: ["telefone pessoal","whatsapp pessoal","celular pessoal","telefone","whatsapp","celular","phone"],
-  schedulingContact: ["whatsapp agendamento","telefone agendamento","agendamento","secretaria"],
+  personalContact: ["telefone pessoal","whatsapp pessoal","celular pessoal","contato pessoal","tel pessoal","wpp pessoal","phone"],
+  schedulingContact: ["contato","tel. agendamento","tel agendamento","telefone agendamento","whatsapp agendamento","contato agendamento","agendamento","secretaria","tel.agendamento","telefone","whatsapp","celular","tel"],
   email: ["email","e-mail","mail"],
   instagram: ["instagram","insta","ig"],
   site: ["site","website","url"],
-  formation: ["formacao","formação","faculdade","universidade","instituição"],
-  councilNumber: ["crm","crp","cro","conselho","registro"],
+  formation: ["formacao","formação","faculdade","universidade","instituicao","instituição"],
+  councilNumber: ["crm","crp","cro","conselho","registro","n crm","num crm"],
   rqe: ["rqe"],
-  cpf: ["cpf"],
-  address: ["endereco","endereço","address"],
+  cpf: ["cpf","cpf/cnpj","cnpj"],
+  address: ["endereco","endereço","address","logradouro"],
   source: ["origem","origin","fonte","canal"],
-  notes: ["observacoes","observações","obs","notas"],
-  monthlyFee: ["mensalidade","fee","valor","plano"],
+  notes: ["observacoes","observações","obs","notas","observacao"],
+  monthlyFee: ["mensalidade","fee","valor","plano","valor mensal"],
 };
 
 function normKey2(s) { return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]/g,"").trim(); }
@@ -2312,7 +2312,29 @@ function Importacao({ onNav }) {
     try {
       let result;
       if (file.name.toLowerCase().endsWith(".csv")) {
-        const text = await file.text();
+        // Try UTF-8 first, fall back to latin1 for Windows Excel exports
+        let text;
+        try {
+          const buffer = await file.arrayBuffer();
+          // Check for BOM
+          const bytes = new Uint8Array(buffer);
+          if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+            // UTF-8 with BOM
+            text = new TextDecoder("utf-8").decode(buffer);
+          } else if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+            // UTF-16 LE
+            text = new TextDecoder("utf-16le").decode(buffer);
+          } else {
+            // Try UTF-8 first, if fails use latin1
+            try {
+              text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+            } catch(e) {
+              text = new TextDecoder("windows-1252").decode(buffer);
+            }
+          }
+        } catch(e) {
+          text = await file.text();
+        }
         result = parseCSV2(text);
       } else {
         // XLSX - load SheetJS dynamically
