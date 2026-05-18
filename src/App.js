@@ -792,7 +792,7 @@ function Curadoria({ onNav }) {
                       {item.particScore && <span style={{ fontSize: 10, background: "#f0faf4", color: "#0f6e56", borderRadius: 99, padding: "2px 7px", fontWeight: 700 }}>⭐ {item.particScore}/10</span>}
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
-                      <Avatar name={item.name} size={30} city={stripState(item.city)} />
+                      <Avatar name={item.name} size={36} city={stripState(item.city)} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           <p style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>{item.name}</p>
@@ -1147,13 +1147,13 @@ function Comercial() {
           const stageIdx = COMMERCIAL_STAGES.indexOf(stage);
           return (
             <div key={stage}
-              style={{ background: cfg.bg, borderRadius: 14, border: "1.5px solid " + cfg.border, minWidth: 260, flex: "0 0 260px", overflow: "hidden" }}
+              style={{ background: cfg.bg, borderRadius: 14, border: "1.5px solid " + cfg.border, minWidth: 300, flex: "0 0 300px", overflow: "hidden" }}
               onDragOver={e => e.preventDefault()}
               onDrop={() => { if (dragging) { setStage(dragging, stage); setDragging(null); } }}>
               <div style={{ padding: "12px 14px 10px", borderBottom: "1.5px solid " + cfg.border, display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 10, height: 10, borderRadius: "50%", background: cfg.color }} />
-                <span style={{ fontWeight: 700, fontSize: 12, color: cfg.color, flex: 1 }}>{cfg.label}</span>
-                <span style={{ background: cfg.color, color: "#fff", borderRadius: 99, padding: "2px 9px", fontSize: 11, fontWeight: 800 }}>{cols[stage].length}</span>
+                <span style={{ fontWeight: 800, fontSize: 13, color: cfg.color, flex: 1 }}>{cfg.label}</span>
+                <span style={{ background: cfg.color, color: "#fff", borderRadius: 99, padding: "2px 10px", fontSize: 12, fontWeight: 800 }}>{cols[stage].length}</span>
               </div>
               <div style={{ padding: "8px 8px 10px", maxHeight: 520, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
                 {cols[stage].map(item => {
@@ -1166,14 +1166,14 @@ function Comercial() {
                       draggable onDragStart={() => setDragging(item.id)} onDragEnd={() => setDragging(null)}
                       onClick={() => setSel(item)}
                       style={{ background: "#fff", borderRadius: 10, border: "1px solid " + cityColor + "25", borderLeft: "3px solid " + cityColor, padding: "10px 12px", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                      <span style={{ fontSize: 10, background: cityColor + "15", color: cityColor, borderRadius: 99, padding: "2px 7px", fontWeight: 700, display: "inline-block", marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, background: cityColor + "15", color: cityColor, borderRadius: 99, padding: "3px 9px", fontWeight: 700, display: "inline-block", marginBottom: 8 }}>
                         📍 {stripState(item.city)}
                       </span>
                       <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
-                        <Avatar name={item.name} size={30} city={stripState(item.city)} />
+                        <Avatar name={item.name} size={36} city={stripState(item.city)} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 12, fontWeight: 700, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
-                          <p style={{ fontSize: 11, color: "#666", margin: 0 }}>{item.specialty}</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
+                          <p style={{ fontSize: 12, color: "#666", margin: 0 }}>{item.specialty}</p>
                         </div>
                       </div>
                       {stage === "comercial_reuniao" && hasMeeting && (
@@ -1189,7 +1189,7 @@ function Comercial() {
                       )}
                       {nextCfg && (
                         <button onClick={e => { e.stopPropagation(); advanceStage(item.id, stage); }}
-                          style={{ width: "100%", background: nextCfg.color + "15", color: nextCfg.color, border: "1px solid " + nextCfg.color + "30", borderRadius: 6, padding: "5px 0", fontSize: 10, fontWeight: 700, cursor: "pointer", marginBottom: 4 }}>
+                          style={{ width: "100%", background: nextCfg.color + "15", color: nextCfg.color, border: "1px solid " + nextCfg.color + "30", borderRadius: 6, padding: "7px 0", fontSize: 11, fontWeight: 700, cursor: "pointer", marginBottom: 5 }}>
                           → {nextCfg.label}
                         </button>
                       )}
