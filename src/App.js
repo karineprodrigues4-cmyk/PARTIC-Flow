@@ -1309,7 +1309,7 @@ function Members() {
   const COLS = [
     { key: "name",              label: "Nome",              width: 200 },
     { key: "profession",        label: "Profissao",         width: 100 },
-    { key: "specialty",         label: "Especialidade",     width: 160 },
+    { key: "specialty",         label: "Especialidade",     width: 200 },
     { key: "councilNumber",     label: "CRM/Conselho",      width: 110 },
     { key: "rqe",               label: "RQE",               width: 80  },
     { key: "personalContact",   label: "Tel. Pessoal",      width: 150 },
@@ -1390,8 +1390,8 @@ function Members() {
                     </div>
                   </td>
                   <td style={{ ...S.td, width: 100, minWidth: 100 }}><span style={{ fontSize: 12, whiteSpace: "nowrap" }}>{m.profession || "Medico"}</span></td>
-                  <td style={{ ...S.td, width: 160, minWidth: 160 }}>
-                    <div style={{ fontSize: 13, whiteSpace: "nowrap" }}>{m.specialty || "-"}</div>
+                  <td style={{ ...S.td, width: 200, minWidth: 200 }}>
+                    <div style={{ fontSize: 13 }}>{m.specialty || "-"}</div>
                     {m.subspecialty && <div style={{ fontSize: 11, color: "#EF4444" }}>{m.subspecialty}</div>}
                   </td>
                   <td style={{ ...S.td, width: 110, minWidth: 110 }}><span style={{ fontSize: 12, whiteSpace: "nowrap" }}>{m.councilNumber || "-"}</span></td>
