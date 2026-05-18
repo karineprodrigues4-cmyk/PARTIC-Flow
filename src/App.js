@@ -2592,7 +2592,7 @@ function Importacao({ onNav }) {
       )}
 
       {activeTab === "import" && (
-
+      <>
       {step === "upload" && (
         <div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
@@ -2680,11 +2680,13 @@ function Importacao({ onNav }) {
             <button style={S.btnG} onClick={() => onNav && onNav(destination)}>Ver dados importados →</button>
           </div>
         </div>
+      </>
       )}
     </div>
   );
 }
 
+      </>
 
 // ─── SCRIPTS OPERACIONAIS ─────────────────────────────────────────────────────
 function Scripts() {
