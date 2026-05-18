@@ -670,6 +670,7 @@ function Leads({ onNav }) {
           </div>
         </div>
       )}
+      )}
     </div>
   );
 }
@@ -871,6 +872,7 @@ function Curadoria({ onNav }) {
             </div>
           </div>
         </div>
+      )}
       )}
     </div>
   );
@@ -1094,6 +1096,7 @@ function Comercial() {
           </div>
         </div>
       )}
+      )}
     </div>
   );
 }
@@ -1240,6 +1243,7 @@ function Members() {
             </div>
           </div>
         </div>
+      )}
       )}
     </div>
   );
@@ -1478,6 +1482,7 @@ function MemberPipeline() {
             </div>
           </div>
         </div>
+      )}
       )}
     </div>
   );
@@ -2086,6 +2091,7 @@ function CalendarPage() {
           </div>
         </div>
       )}
+      )}
     </div>
   );
 }
@@ -2298,6 +2304,10 @@ function Importacao({ onNav }) {
   const [preview, setPreview] = useState([]);
   const [loading, setLoading] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
+  const [activeTab, setActiveTab] = useState("import");
+  const [importHistory, setImportHistory] = useState(() => DB.get("import_history", []));
+  const [viewBase, setViewBase] = useState("members");
+  const [baseSearch, setBaseSearch] = useState("");
 
   const DEST_OPTIONS = [
     { id: "leads", label: "Leads", desc: "Banco de contatos para prospecção", icon: "👥" },
@@ -2421,8 +2431,22 @@ function Importacao({ onNav }) {
       DB.set("contacts", [...existing, ...newOnes]);
       setImportedCount(newOnes.length);
     }
+    // Save import history
+    const history = DB.get("import_history", []);
+    DB.set("import_history", [{
+      id: Date.now(),
+      date: new Date().toISOString(),
+      fileName: fileName,
+      destination: destination,
+      total: unique.length,
+      added: destination === "members" ? 
+        (() => { const existing = DB.get("members", []); return unique.filter(c => !new Set(existing.map(normK)).has(normK(c))).length; })() :
+        importedCount,
+      status: "ativa"
+    }, ...history.slice(0, 19)]);
+
     setStep("done");
-    showToast("Importação concluída ✓");
+    showToast("Importacao concluida!");
   }
 
   function reset() { setStep("upload"); setParsed(null); setMapping({}); setPreview([]); setFileName(""); setImportedCount(0); }
@@ -2430,9 +2454,144 @@ function Importacao({ onNav }) {
   return (
     <div>
       <div style={S.topbar}>
-        <div><h1 style={S.sectionTitle}>Importação de Dados</h1><p style={S.sectionSub}>CSV ou XLSX · mapeamento automático · dados incompletos são aceitos</p></div>
-        {step !== "upload" && <button style={S.btnO} onClick={reset}>← Nova importação</button>}
+        <div><h1 style={S.sectionTitle}>Importação de Dados</h1><p style={S.sectionSub}>CSV ou XLSX · mapeamento automatico · deduplicacao por nome</p></div>
+        {step !== "upload" && activeTab === "import" && <button style={S.btnO} onClick={reset}>← Nova importacao</button>}
       </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #e5e5e5", marginBottom: 20 }}>
+        {[
+          { id: "import", label: "📥 Nova Importacao" },
+          { id: "history", label: "📋 Historico (" + importHistory.length + ")" },
+          { id: "base", label: "👥 Ver Base de Dados" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            style={{ padding: "8px 18px", fontSize: 13, fontWeight: activeTab === t.id ? 700 : 400, cursor: "pointer", background: "none", border: "none", borderBottom: activeTab === t.id ? "2px solid " + C.azulPetroleo : "2px solid transparent", color: activeTab === t.id ? C.azulPetroleo : "#aaa", marginBottom: -1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: Historico */}
+      {activeTab === "history" && (
+        <div>
+          {importHistory.length === 0 ? (
+            <div style={{ ...S.card, textAlign: "center", padding: "40px", color: "#aaa" }}>
+              <p style={{ fontSize: 32, margin: "0 0 8px" }}>📋</p>
+              <p>Nenhuma importacao realizada ainda</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {importHistory.map(h => (
+                <div key={h.id} style={{ ...S.card, padding: "14px 16px", display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ fontSize: 28 }}>📊</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>{h.fileName || "Arquivo importado"}</div>
+                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#888", flexWrap: "wrap" }}>
+                      <span>📅 {new Date(h.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                      <span>📁 {h.destination === "members" ? "Membros" : h.destination === "leads" ? "Leads" : "Curadoria"}</span>
+                      <span style={{ color: "#10B981", fontWeight: 600 }}>✓ {h.added} adicionados</span>
+                      <span>{h.total} no arquivo</span>
+                    </div>
+                  </div>
+                  <span style={{ background: "#f0faf4", color: "#0f6e56", borderRadius: 99, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
+                    {h.status || "ativa"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Ver Base */}
+      {activeTab === "base" && (
+        <div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
+            <select style={{ ...S.select, height: 34, fontSize: 12, width: "auto", minWidth: 160 }}
+              value={viewBase} onChange={e => setViewBase(e.target.value)}>
+              <option value="members">Membros ({DB.get("members",[]).length})</option>
+              <option value="leads">Leads ({DB.get("contacts",[]).filter(c=>c.stage==="lead").length})</option>
+            </select>
+            <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
+              <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#aaa" }}>{I.search}</span>
+              <input style={{ ...S.input, paddingLeft: 28, height: 34, fontSize: 12, width: "100%" }}
+                placeholder="Buscar por nome..."
+                value={baseSearch} onChange={e => setBaseSearch(e.target.value)} />
+            </div>
+          </div>
+
+          {(() => {
+            const rawData = viewBase === "members" 
+              ? DB.get("members", [])
+              : DB.get("contacts", []).filter(c => c.stage === "lead");
+            const filtered = baseSearch 
+              ? rawData.filter(c => (c.name||"").toLowerCase().includes(baseSearch.toLowerCase()))
+              : rawData;
+            
+            return (
+              <div>
+                <p style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>
+                  {filtered.length} de {rawData.length} registros
+                </p>
+                <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "#f7f7f5" }}>
+                        {["Nome", "Especialidade", "Cidade", "Contato", "Acao"].map(h => (
+                          <th key={h} style={S.th}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.slice(0, 100).map(item => (
+                        <tr key={item.id} style={{ borderBottom: "1px solid #f5f5f5" }}>
+                          <td style={S.td}>
+                            <div style={{ fontSize: 12, fontWeight: 600 }}>{item.name}</div>
+                            <div style={{ fontSize: 10, color: "#aaa" }}>{item.profession || "Medico"}</div>
+                          </td>
+                          <td style={S.td}><span style={{ fontSize: 12 }}>{item.specialty || "-"}</span></td>
+                          <td style={S.td}><span style={{ fontSize: 11, color: "#666" }}>{item.city || "-"}</span></td>
+                          <td style={S.td}>
+                            <WppBtn phone={item.personalContact || item.schedulingContact || item.phone} size="xs" />
+                          </td>
+                          <td style={S.td}>
+                            <button onClick={() => {
+                              if (!confirm("Remover " + item.name + "?")) return;
+                              if (viewBase === "members") {
+                                const updated = DB.get("members",[]).filter(m => m.id !== item.id);
+                                DB.set("members", updated);
+                              } else {
+                                const updated = DB.get("contacts",[]).filter(c => c.id !== item.id);
+                                DB.set("contacts", updated);
+                              }
+                              setBaseSearch(s => s + " ");
+                              setTimeout(() => setBaseSearch(s => s.trim()), 10);
+                              showToast(item.name + " removido");
+                            }} style={{ fontSize: 10, background: "#fff0f0", color: "#a32d2d", border: "1px solid #fca5a5", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}>
+                              {I.trash}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {filtered.length === 0 && (
+                        <tr><td colSpan={5} style={{ padding: "30px", textAlign: "center", color: "#aaa" }}>Nenhum registro encontrado</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                  {filtered.length > 100 && (
+                    <div style={{ padding: "10px 16px", fontSize: 11, color: "#aaa", textAlign: "center" }}>
+                      Mostrando 100 de {filtered.length}. Use a busca para encontrar registros especificos.
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {activeTab === "import" && (
 
       {step === "upload" && (
         <div>
@@ -2572,6 +2731,7 @@ function Scripts() {
           </div>
         </div>
       )}
+      )}
     </div>
   );
 }
@@ -2674,6 +2834,7 @@ function Settings({ user, onLogout }) {
             </div>
           )}
         </div>
+      )}
       )}
     </div>
   );
@@ -3992,6 +4153,7 @@ function CentralOperacional() {
             </div>
           </div>
         </div>
+      )}
       )}
     </div>
   );
