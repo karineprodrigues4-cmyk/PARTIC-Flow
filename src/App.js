@@ -1869,7 +1869,7 @@ function Mapeamento({ onNav }) {
                     const totalUsed = macroUsed + subUsed;
                     const livre = Math.max(0, v.macro - macroUsed);
                     const subLivre = Math.max(0, v.sub - subUsed);
-                    const membersInEsp = cityMembers.filter(m => m.specialty === esp);
+                    const membersInEsp = cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp));
                     return (
                       <div key={esp} style={{ background: "#fafafa", borderRadius: 7, padding: "6px 10px", border: "1px solid #f0f0f0" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -1903,7 +1903,7 @@ function Mapeamento({ onNav }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {VAGAS_CONFIG.naoMedicas.map(esp => {
                     const used = getNmedUsed(esp);
-                    const livre = Math.max(0, v.naoMed - used);
+                    const livre = Math.max(0, v.nmed - used);
                     const membersInEsp = cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp));
                     return (
                       <div key={esp} style={{ background: "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid #f0f0f0" }}>
@@ -1918,11 +1918,11 @@ function Mapeamento({ onNav }) {
                             )}
                           </div>
                           <span style={{ fontSize: 11, color: livre === 0 ? "#EF4444" : "#aaa", fontWeight: livre === 0 ? 700 : 400 }}>
-                            {used}/{v.naoMed} {livre === 0 ? "✓ COMPLETO" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
+                            {used}/{v.nmed} {livre === 0 ? "✓ COMPLETO" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
                           </span>
                         </div>
                         <div style={{ width: "100%", height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: membersInEsp.length > 0 ? 6 : 0 }}>
-                          <div style={{ height: "100%", background: livre === 0 ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: Math.min(100, (used / v.naoMed) * 100) + "%" }} />
+                          <div style={{ height: "100%", background: livre === 0 ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: Math.min(100, (used / v.nmed) * 100) + "%" }} />
                         </div>
                         {membersInEsp.length > 0 && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
@@ -2657,13 +2657,35 @@ function Importacao({ onNav }) {
   }
 
   function normContact(raw, dest) {
+    // Auto-detect city from address if city is empty
+    let cityVal = (raw.city || "").trim();
+    if (!cityVal && raw.address) {
+      const addr = raw.address.toLowerCase();
+      const cityMap = [
+        ["ribeirao preto", "Ribeirão Preto"], ["uberlandia", "Uberlândia"],
+        ["sao jose do rio preto", "São José do Rio Preto"], ["bauru", "Bauru"],
+        ["uberaba", "Uberaba"], ["presidente prudente", "Presidente Prudente"],
+        ["campinas", "Campinas"], ["bonfim paulista", "Bonfim Paulista"],
+        ["tres coracoes", "Três Corações"], ["tres coracões", "Três Corações"],
+      ];
+      for (const [key, label] of cityMap) {
+        if (addr.includes(key)) { cityVal = label; break; }
+      }
+    }
+    // Extract city from "CidadeNome-SP" format
+    if (cityVal && cityVal.includes("-")) {
+      const parts = cityVal.split("-");
+      if (parts[parts.length-1].trim().length === 2) {
+        cityVal = parts.slice(0, -1).join("-").trim();
+      }
+    }
     const base = {
       id: Date.now() + Math.random(),
       name: (raw.name || "").trim(),
       specialty: (raw.specialty || "").trim(),
       subspecialty: (raw.subspecialty || "").trim(),
       profession: (raw.profession || "Medico").trim(),
-      city: (raw.city || "").trim(),
+      city: cityVal,
       state: (raw.state || "").trim(),
       email: (raw.email || "").trim(),
       instagram: (raw.instagram || "").trim(),
