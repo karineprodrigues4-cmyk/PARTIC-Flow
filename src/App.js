@@ -2686,8 +2686,6 @@ function Importacao({ onNav }) {
   );
 }
 
-      </>
-
 // ─── SCRIPTS OPERACIONAIS ─────────────────────────────────────────────────────
 function Scripts() {
   const [scripts, setScripts] = useState(DB.get("scripts", []));
@@ -4403,5 +4401,8 @@ export default function App() {
       <Sidebar page={page} onNav={setPage} user={user} />
       <div style={S.main}>{PAGES[page] || PAGES.dashboard}</div>
     </div>
+  );
+}
+iv>
   );
 }
