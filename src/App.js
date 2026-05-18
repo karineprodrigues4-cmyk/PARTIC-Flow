@@ -153,8 +153,8 @@ const S = {
   kanbanCol: { background: "#f7f7f5", borderRadius: 12, padding: "12px 10px", minWidth: 240, flex: "0 0 240px" },
   kanbanCard: { background: "#fff", borderRadius: 10, border: "1px solid #e5e5e5", padding: "10px 12px", marginBottom: 8, cursor: "pointer" },
   filterBar: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: 800, margin: "0 0 2px" },
-  sectionSub: { fontSize: 12, color: "#888", margin: 0 },
+  sectionTitle: { fontSize: 20, fontWeight: 800, margin: "0 0 2px" },
+  sectionSub: { fontSize: 13, color: "#888", margin: 0 },
 };
 
 // ─── ÍCONES ───────────────────────────────────────────────────────────────────
@@ -581,14 +581,14 @@ function Leads({ onNav }) {
           return (
             <div key={lead.id} style={{ ...S.card, padding: "14px 16px", borderLeft: "3px solid " + C.azulPetroleo }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-                <Avatar name={lead.name} size={38} fixed />
+                <Avatar name={lead.name} size={42} fixed />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lead.name}</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lead.name}</p>
                   <p style={{ fontSize: 11, color: "#555", margin: "0 0 2px" }}>
                     {lead.specialty || "Especialidade nao informada"}
                     {lead.subspecialty ? " · " + lead.subspecialty : ""}
                   </p>
-                  {cityDisplay && <p style={{ fontSize: 11, color: "#888", margin: 0 }}>📍 {cityDisplay}</p>}
+                  {cityDisplay && <p style={{ fontSize: 12, color: "#888", margin: 0 }}>📍 {cityDisplay}</p>}
                 </div>
               </div>
 
@@ -800,7 +800,7 @@ function Curadoria({ onNav }) {
                             style={{ color: "#ccc", textDecoration: "none", fontSize: 11 }}
                             onMouseEnter={e => e.currentTarget.style.color="#555"} onMouseLeave={e => e.currentTarget.style.color="#ccc"}>🔍</a>
                         </div>
-                        <p style={{ fontSize: 11, color: "#555", margin: "2px 0 0" }}>
+                        <p style={{ fontSize: 12, color: "#555", margin: "3px 0 0" }}>
                           {item.specialty}{item.subspecialty ? <span style={{ color: "#EF4444", fontWeight: 600 }}> · {item.subspecialty}</span> : ""}
                         </p>
                       </div>
