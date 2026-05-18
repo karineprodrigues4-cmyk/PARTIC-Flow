@@ -121,13 +121,6 @@ function showToast(msg, type = "ok") {
   setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity .3s"; setTimeout(() => el.remove(), 300); }, 2600);
 }
 
-const COMMERCIAL_STAGES = {
-  prospecto: { label: "Prospecto", color: "#3B82F6" },
-  aguardando_resposta: { label: "Aguardando", color: "#8B5CF6" },
-  reuniao_agendada: { label: "Reunião Agendada", color: "#F97316" },
-  negociacao: { label: "Negociação", color: "#EF4444" },
-  fechou: { label: "Fechou! 🎉", color: "#10B981" },
-};
 
 const PIPELINE_STAGES = [
   { id: "a_fazer", label: "A Fazer", color: "#94A3B8" },
