@@ -4592,7 +4592,7 @@ function Diagnostic({ onComplete }) {
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
-export default const CREDENTIALS = [
+const CREDENTIALS = [
   { email: "karine@partic.com.br", password: "Partic2025", name: "Karine Rodrigues", role: "admin" },
 ];
 
