@@ -4656,7 +4656,7 @@ function LoginScreen({ onLogin }) {
           </button>
         </form>
         <p style={{ textAlign: "center", fontSize: 12, color: "#aaa", marginTop: "1.5rem" }}>
-          <a href="/landing.html" style={{ color: "#1B6B8A", textDecoration: "none", fontWeight: 600 }}>← Voltar ao site</a>
+          <a href="/" style={{ color: "#1B6B8A", textDecoration: "none", fontWeight: 600 }}>← Voltar ao site</a>
           <span style={{ margin: "0 8px" }}>·</span>
           PARTIC Flow © 2025
         </p>
