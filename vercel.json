@@ -1,8 +1,1 @@
-{
-  "rewrites": [
-    {
-      "source": "/((?!landing\\.html|static|favicon\\.ico|manifest\\.json).*)",
-      "destination": "/index.html"
-    }
-  ]
-}
+{}
