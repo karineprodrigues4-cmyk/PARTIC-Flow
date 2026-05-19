@@ -2218,7 +2218,7 @@ function Calendar() {
                       const fs = dayMeetings.length <= 2 ? 11 : 9;
                       return (
                         <div key={m.id} onClick={e => { e.stopPropagation(); setSelMeeting(m); }}
-                          style={{ fontSize: fs, background: cfg.color, color: "#fff", borderRadius: 4, padding: dayMeetings.length <= 2 ? "2px 5px" : "1px 4px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 700, cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }}>
+                          style={{ fontSize: fs, background: cfg.bg, color: "#0D2233", borderRadius: 4, padding: dayMeetings.length <= 2 ? "2px 5px" : "1px 4px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 700, cursor: "pointer", border: "1px solid " + cfg.color + "40" }}>
                           {m.time ? m.time + " " : ""}{m.title}
                         </div>
                       );
