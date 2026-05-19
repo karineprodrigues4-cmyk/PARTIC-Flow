@@ -1878,11 +1878,20 @@ function Mapeamento({ onNav }) {
                     const membersInEsp = cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp));
                     return (
                       <div key={esp} style={{ background: "#fafafa", borderRadius: 7, padding: "6px 10px", border: "1px solid #f0f0f0" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600 }}>{esp}</span>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, flexWrap: "wrap", gap: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
+                            {(livre > 0 || subLivre > 0) && (
+                              <button onClick={() => onNav && onNav("leads", { city: selCity.n, spec: esp })}
+                                style={{ fontSize: 10, background: C.azulPetroleo + "15", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "30", borderRadius: 99, padding: "2px 8px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                🔍 Ver Leads
+                              </button>
+                            )}
+                          </div>
                           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                             {livre === 0 && totalUsed > 0 && <span style={{ fontSize: 10, color: "#EF4444", fontWeight: 700 }}>CHEIO</span>}
                             <span style={{ fontSize: 10, color: "#aaa" }}>{totalUsed}/{v.macro} geral · {subUsed}/{v.sub} sub</span>
+                          </div>
                           </div>
                         </div>
                         <div style={{ height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: 4 }}>
