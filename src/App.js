@@ -4592,15 +4592,101 @@ function Diagnostic({ onComplete }) {
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
-export default function App() {
-  const [user] = useState({ id: 1, name: "Karine Rodrigues", email: "karine@partic.com.br", role: "admin" });
+export default const CREDENTIALS = [
+  { email: "karine@partic.com.br", password: "Partic2025", name: "Karine Rodrigues", role: "admin" },
+];
+
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+
+  function handleLogin(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setTimeout(() => {
+      const user = CREDENTIALS.find(c => c.email.toLowerCase() === email.toLowerCase().trim() && c.password === password);
+      if (user) {
+        onLogin(user);
+      } else {
+        setError("Email ou senha incorretos.");
+        setLoading(false);
+      }
+    }, 600);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0D2233 0%, #1B6B8A 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", fontFamily: "'Outfit', sans-serif" }}>
+      <div style={{ background: "#fff", borderRadius: 20, padding: "2.5rem", width: "100%", maxWidth: 420, boxShadow: "0 40px 80px rgba(13,34,51,0.4)" }}>
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <div style={{ width: 52, height: 52, background: "linear-gradient(135deg, #1B6B8A, #5BB8D4)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem", fontSize: 22, fontWeight: 800, color: "#fff" }}>P</div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0D2233", margin: "0 0 4px" }}>PARTIC Flow</h1>
+          <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Acesse sua conta para continuar</p>
+        </div>
+        <form onSubmit={handleLogin}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#0D2233", marginBottom: 6 }}>Email</label>
+            <input
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="seu@email.com" required autoFocus
+              style={{ width: "100%", padding: "12px 14px", border: "1.5px solid rgba(27,107,138,0.2)", borderRadius: 10, fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+            />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#0D2233", marginBottom: 6 }}>Senha</label>
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••" required
+                style={{ width: "100%", padding: "12px 44px 12px 14px", border: "1.5px solid rgba(27,107,138,0.2)", borderRadius: 10, fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+              />
+              <button type="button" onClick={() => setShowPass(s => !s)}
+                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: 16 }}>
+                {showPass ? "🙈" : "👁"}
+              </button>
+            </div>
+          </div>
+          {error && <div style={{ background: "#fff0f0", color: "#a32d2d", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 14, border: "1px solid #fca5a5" }}>{error}</div>}
+          <button type="submit" disabled={loading}
+            style={{ width: "100%", padding: 14, background: "linear-gradient(135deg, #1B6B8A, #5BB8D4)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}>
+            {loading ? "Verificando..." : "Entrar"}
+          </button>
+        </form>
+        <p style={{ textAlign: "center", fontSize: 12, color: "#aaa", marginTop: "1.5rem" }}>
+          PARTIC Flow © 2025 — Dados protegidos
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [user, setUser] = useState(() => {
+    const saved = sessionStorage.getItem("partic_user");
+    return saved ? JSON.parse(saved) : null;
+  });
 
   const [page, setPage] = useState("dashboard");
 
   useEffect(() => { initData(); }, []);
   // Diagnostic only shown manually via menu
 
-  function handleLogout() { showToast("Logout simulado — login será reativado em breve", "info"); }
+  function handleLogin(u) {
+    sessionStorage.setItem("partic_user", JSON.stringify(u));
+    setUser(u);
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem("partic_user");
+    setUser(null);
+  }
+
+  if (!user) return <LoginScreen onLogin={handleLogin} />;
+
+
   const [navParams, setNavParams] = useState({});
   function navigate(p, params) { setPage(p); setNavParams(params || {}); }
 
