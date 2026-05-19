@@ -2213,16 +2213,17 @@ function Calendar() {
                   <div key={day} onClick={() => openAdd(year + "-" + String(month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0"))}
                     style={{ minHeight: 80, borderRight: "1px solid #f0f0f0", borderBottom: "1px solid #f0f0f0", padding: 4, cursor: "pointer", background: isToday ? C.azulPetroleo + "05" : "#fff" }}>
                     <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 400, color: isToday ? C.azulPetroleo : "#333", width: 22, height: 22, borderRadius: "50%", background: isToday ? C.azulPetroleo : "transparent", color: isToday ? "#fff" : "#333", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 2 }}>{day}</div>
-                    {dayMeetings.slice(0,2).map(m => {
+                    {dayMeetings.slice(0,3).map(m => {
                       const cfg = MEETING_TYPES[m.type] || MEETING_TYPES.outro;
+                      const fs = dayMeetings.length <= 2 ? 11 : 9;
                       return (
                         <div key={m.id} onClick={e => { e.stopPropagation(); setSelMeeting(m); }}
-                          style={{ fontSize: 9, background: cfg.bg, color: cfg.color, borderRadius: 4, padding: "1px 4px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600, cursor: "pointer" }}>
+                          style={{ fontSize: fs, background: cfg.color, color: "#fff", borderRadius: 4, padding: dayMeetings.length <= 2 ? "2px 5px" : "1px 4px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 700, cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }}>
                           {m.time ? m.time + " " : ""}{m.title}
                         </div>
                       );
                     })}
-                    {dayMeetings.length > 2 && <div style={{ fontSize: 9, color: "#aaa" }}>+{dayMeetings.length - 2} mais</div>}
+                    {dayMeetings.length > 3 && <div style={{ fontSize: 9, color: "#888", fontWeight: 600 }}>+{dayMeetings.length - 3} mais</div>}
                   </div>
                 );
               })}
@@ -4394,6 +4395,11 @@ function CentralOperacional() {
 
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 function Sidebar({ page, onNav, user }) {
+  const todayMeetings = (() => {
+    const meetings = DB.get("meetings", []);
+    const today = new Date().toISOString().slice(0, 10);
+    return meetings.filter(m => m.date === today).length;
+  })();
   const _sidebarContacts = DB.get("contacts", []);
   const inEval = _sidebarContacts.filter(c => c.stage === "curadoria_avaliacao").length;
   const [membersOpen, setMembersOpen] = useState(["members", "anchors", "member_pipeline"].includes(page));
@@ -4426,7 +4432,7 @@ function Sidebar({ page, onNav, user }) {
           { id: "leads", label: "Leads", icon: I.leads },
           { id: "curadoria", label: "Curadoria", icon: I.curadoria, badge: inEval },
           { id: "comercial", label: "Comercial", icon: I.comercial },
-          { id: "calendar", label: "Calendário", icon: I.calendar },
+          { id: "calendar", label: "Calendário", icon: I.calendar, badge: todayMeetings },
         ].map(item => (
           <button key={item.id} style={navItemStyle(page === item.id)} onClick={() => onNav(item.id)}>
             <span style={{ flexShrink: 0 }}>{item.icon}</span>
