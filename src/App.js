@@ -428,10 +428,16 @@ function useContacts() {
 
 
 // ─── LEADS ────────────────────────────────────────────────────────────────────
-function Leads({ onNav }) {
+function Leads({ onNav, initialFilters }) {
   const { contacts, save, moveStage } = useContacts();
 
-  const [filters, setFilters] = useState({ city: "", spec: "", search: "" });
+  const [filters, setFilters] = useState({ city: (initialFilters && initialFilters.city) || "", spec: (initialFilters && initialFilters.spec) || "", search: "" });
+
+  useEffect(() => {
+    if (initialFilters && (initialFilters.city || initialFilters.spec)) {
+      setFilters({ city: initialFilters.city || "", spec: initialFilters.spec || "", search: "" });
+    }
+  }, [initialFilters && initialFilters.city, initialFilters && initialFilters.spec]);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({
     name: "", specialty: "", subspecialty: "", profession: "Medico",
@@ -1508,6 +1514,38 @@ function Members() {
 
 function Anchors() {
   const members = DB.get("members", []).filter(m => m.isAnchor);
+  // Dr. Leon Macedo always first (CEO/Âncora)
+  const leon = members.find(m => m.name && m.name.toLowerCase().includes("leon"));
+  const others = members.filter(m => !m.name || !m.name.toLowerCase().includes("leon"));
+  const sorted = leon ? [leon, ...others] : others;
+
+  const AnchorCard = ({ m, featured }) => (
+    <div style={{ ...S.card,
+      borderLeft: "3px solid " + getCityColor(m.city),
+      background: featured ? "linear-gradient(135deg," + C.noite + "08," + C.azulPetroleo + "08)" : "#fff",
+      border: featured ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5",
+      position: "relative",
+    }}>
+      {featured && (
+        <div style={{ position: "absolute", top: -10, left: 16, background: C.azulPetroleo, color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 99, padding: "2px 10px", letterSpacing: 1 }}>
+          ⚓ CEO PARTIC
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12, marginTop: featured ? 8 : 0 }}>
+        <Avatar name={m.name} size={featured ? 56 : 48} city={m.city} />
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: featured ? 16 : 14, fontWeight: 800, margin: "0 0 2px" }}>{m.name}</p>
+          <p style={{ fontSize: 12, color: "#666", margin: "0 0 3px" }}>{m.specialty}{m.subspecialty && <span style={{ color: "#EF4444" }}> · {m.subspecialty}</span>}</p>
+          <span style={{ fontSize: 11, background: getCityColor(m.city) + "20", color: getCityColor(m.city), borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>⚓ {m.city}{m.state ? " - " + m.state : ""}</span>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {m.personalContact && <WppBtn phone={m.personalContact} showNumber={true} />}
+        {m.email && <a href={"mailto:" + m.email} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
+      </div>
+    </div>
+  );
+
   return (
     <div>
       <div style={S.topbar}>
@@ -1516,32 +1554,18 @@ function Anchors() {
           <p style={S.sectionSub}>{members.length} âncoras confirmados</p>
         </div>
       </div>
+
+      {leon && (
+        <div style={{ marginBottom: 20 }}>
+          <AnchorCard m={leon} featured={true} />
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
-        {members.map(m => (
-          <div key={m.id} style={{ ...S.card, borderLeft: `3px solid ${getCityColor(m.city)}` }}>
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
-              <Avatar name={m.name} size={48} city={m.city} />
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: 800, margin: "0 0 2px" }}>{m.name}</p>
-                <p style={{ fontSize: 12, color: "#666", margin: "0 0 3px" }}>{m.specialty}{m.subspecialty && <span style={{ color: "#EF4444" }}> · {m.subspecialty}</span>}</p>
-                <span style={{ fontSize: 11, background: getCityColor(m.city) + "20", color: getCityColor(m.city), borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>⚓ {m.city} - {m.state}</span>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {m.personalContact && (
-                <a href={`https://wa.me/55${m.personalContact.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>
-                  {I.wpp} {m.personalContact}
-                </a>
-              )}
-              {m.email && (
-                <a href={`mailto:${m.email}`} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>
-                  {I.mail} E-mail
-                </a>
-              )}
-            </div>
-          </div>
+        {others.map(m => (
+          <AnchorCard key={m.id} m={m} featured={false} />
         ))}
-        {members.length === 0 && (
+        {others.length === 0 && !leon && (
           <div style={{ gridColumn: "1/-1", ...S.card, textAlign: "center", padding: "48px 20px", color: "#aaa" }}>
             <p style={{ fontSize: 32, margin: "0 0 10px" }}>⚓</p>
             <p>Nenhum âncora cadastrado ainda. Marque membros como âncora na tela de Membros.</p>
@@ -1744,187 +1768,175 @@ function MemberPipeline() {
   );
 }
 
+
+
 // ─── MAPEAMENTO ───────────────────────────────────────────────────────────────
 const VAGAS_CONFIG = {
-  medicas: ["Cardiologia","Dermatologia","Endocrinologia","Gastroenterologia","Ginecologia e Obstetrícia","Neurologia","Oncologia","Ortopedia","Otorrinolaringologia","Pediatria","Pneumologia","Psiquiatria","Reumatologia","Urologia","Oftalmologia","Cirurgia Geral","Cirurgia Plástica","Infectologia","Nefrologia","Hematologia"],
-  naoMedicas: ["Nutrição","Psicologia","Fisioterapia","Fonoaudiologia"],
+  medicas: ["Cardiologia","Dermatologia","Endocrinologia","Gastroenterologia","Ginecologia","Neurologia","Oncologia","Ortopedia","Otorrinolaringologia","Pediatria","Pneumologia","Psiquiatria","Reumatologia","Urologia","Oftalmologia","Cirurgia Geral","Cirurgia Plastica","Infectologia","Nefrologia","Hematologia"],
+  naoMedicas: ["Nutricao","Psicologia","Fisioterapia","Fonoaudiologia","Odontologia","Enfermagem"],
 };
-const ANCORAS_MAP = [
-  { cidade: "Ribeirão Preto", e: "SP" }, { cidade: "Uberlândia", e: "MG" },
-  { cidade: "Presidente Prudente", e: "SP" }, { cidade: "Uberaba", e: "MG" },
-  { cidade: "São José do Rio Preto", e: "SP" }, { cidade: "Bauru", e: "SP" },
-];
+
 const CIDADES_MAP = [
-  { n: "São Paulo", e: "SP", p: 12300000 }, { n: "Rio de Janeiro", e: "RJ", p: 6700000 },
-  { n: "Belo Horizonte", e: "MG", p: 2700000 }, { n: "Brasília", e: "DF", p: 3100000 },
-  { n: "Curitiba", e: "PR", p: 1950000 }, { n: "Fortaleza", e: "CE", p: 2700000 },
-  { n: "Recife", e: "PE", p: 1650000 }, { n: "Salvador", e: "BA", p: 2900000 },
-  { n: "Porto Alegre", e: "RS", p: 1480000 }, { n: "Campinas", e: "SP", p: 1200000 },
-  { n: "Ribeirão Preto", e: "SP", p: 700000 }, { n: "Uberlândia", e: "MG", p: 700000 },
-  { n: "Florianópolis", e: "SC", p: 530000 }, { n: "Londrina", e: "PR", p: 570000 },
-  { n: "Bauru", e: "SP", p: 380000 }, { n: "São José do Rio Preto", e: "SP", p: 460000 },
-  { n: "Uberaba", e: "MG", p: 340000 }, { n: "Presidente Prudente", e: "SP", p: 230000 },
-  { n: "Manaus", e: "AM", p: 2200000 }, { n: "Goiânia", e: "GO", p: 1520000 },
+  { n: "Ribeirao Preto", e: "SP", p: 720000 },
+  { n: "Uberlandia", e: "MG", p: 706000 },
+  { n: "Sao Jose do Rio Preto", e: "SP", p: 460000 },
+  { n: "Bauru", e: "SP", p: 380000 },
+  { n: "Uberaba", e: "MG", p: 340000 },
+  { n: "Presidente Prudente", e: "SP", p: 230000 },
+  { n: "Campinas", e: "SP", p: 1200000 },
+  { n: "Sao Paulo", e: "SP", p: 12000000 },
+  { n: "Belo Horizonte", e: "MG", p: 2500000 },
+  { n: "Curitiba", e: "PR", p: 1900000 },
+  { n: "Porto Alegre", e: "RS", p: 1400000 },
+  { n: "Goiania", e: "GO", p: 1500000 },
+  { n: "Florianopolis", e: "SC", p: 520000 },
+  { n: "Brasilia", e: "DF", p: 3000000 },
+  { n: "Franca", e: "SP", p: 350000 },
+  { n: "Marilia", e: "SP", p: 230000 },
+  { n: "Fortaleza", e: "CE", p: 2700000 },
+  { n: "Recife", e: "PE", p: 1600000 },
+  { n: "Salvador", e: "BA", p: 2900000 },
+  { n: "Manaus", e: "AM", p: 2200000 },
 ];
-function calcVagas(p) { const f = Math.pow(p / 700000, 0.6); return { macro: Math.max(2, Math.round(6 * f)), sub: Math.max(1, Math.round(3 * f)), nmed: Math.max(2, Math.round(8 * f)) }; }
+
+function calcVagas2(p) {
+  var f = Math.pow(p / 700000, 0.6);
+  return { macro: Math.max(2, Math.round(6 * f)), nmed: Math.max(2, Math.round(8 * f)) };
+}
+
+function normCM(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s*[\/\-,]\s*[a-z]{2}$/i, "").trim(); }
+function normSM(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim(); }
 
 function Mapeamento({ onNav }) {
-  const [selCity, setSelCity] = useState(null);
-  const [search, setSearch] = useState("");
-  const members = DB.get("members", []).filter(m => m.status === "active");
+  var [selCity, setSelCity] = useState(null);
+  var [search, setSearch] = useState("");
+  var members = DB.get("members", []).filter(function(m) { return m.status === "active"; });
 
-  const filtered = CIDADES_MAP.filter(c => !search || `${c.n} ${c.e}`.toLowerCase().includes(search.toLowerCase()));
-  const hasAnchor = (n, e) => ANCORAS_MAP.some(a => a.cidade === n && a.e === e) || members.some(m => m.isAnchor && m.city === n);
+  var filtered = search ? CIDADES_MAP.filter(function(c) { return normCM(c.n).includes(normCM(search)); }) : CIDADES_MAP;
+
+  function getCityCount(name) { return members.filter(function(m) { return normCM(m.city) === normCM(name); }).length; }
+
+  var cityMems = selCity ? members.filter(function(m) { return normCM(m.city) === normCM(selCity.n); }) : [];
+  var vg = selCity ? calcVagas2(selCity.p) : null;
+
+  function getMUsed(esp) { return cityMems.filter(function(m) { return normSM(m.specialty) === normSM(esp); }).length; }
+
+  function renderRow(esp, used, total, onVer) {
+    var livre = Math.max(0, total - used);
+    var isFull = livre === 0 && used > 0;
+    var pct = Math.min(100, total > 0 ? (used / total) * 100 : 0);
+    var rowMems = cityMems.filter(function(m) { return normSM(m.specialty) === normSM(esp); });
+    return (
+      <div key={esp} style={{ background: isFull ? "#f0fdf4" : "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid " + (isFull ? "#a7f3d0" : "#f0f0f0"), marginBottom: 5 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
+            {livre > 0 && (
+              <button onClick={onVer} style={{ fontSize: 10, background: C.azulPetroleo + "20", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "40", borderRadius: 99, padding: "2px 8px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>
+                Ver Leads
+              </button>
+            )}
+          </div>
+          <span style={{ fontSize: 11, color: isFull ? "#0f6e56" : "#888", fontWeight: isFull ? 700 : 400 }}>
+            {used}/{total} {isFull ? "Completo" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
+          </span>
+        </div>
+        <div style={{ width: "100%", height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: rowMems.length > 0 ? 5 : 0 }}>
+          <div style={{ height: "100%", background: isFull ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: pct + "%" }} />
+        </div>
+        {rowMems.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+            {rowMems.map(function(m) { return (
+              <span key={m.id} style={{ fontSize: 10, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 99, padding: "2px 7px", color: "#555" }}>
+                {m.name}
+              </span>
+            ); })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
       <div style={S.topbar}>
         <div>
           <h1 style={S.sectionTitle}>Mapeamento de Vagas</h1>
-          <p style={S.sectionSub}>Vagas por cidade e especialidade · proporcionais a Ribeirão Preto</p>
+          <p style={S.sectionSub}>Vagas por cidade baseado em membros ativos</p>
         </div>
-        <button style={S.btnG} onClick={() => onNav("generator")}>{I.generator} Gerar Leads para cidade</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr 1.4fr" : "1fr", gap: 16 }}>
-        <div>
-          <div style={{ position: "relative", marginBottom: 12 }}>
-            <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#aaa" }}>{I.search}</span>
-            <input style={{ ...S.input, paddingLeft: 28 }} placeholder="Buscar cidade..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <div style={{ ...S.card, padding: 0, overflow: "hidden", maxHeight: 560, overflowY: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f7f7f5" }}>
-                  {["Cidade", "Vagas/Esp.", "Âncora"].map(h => <th key={h} style={S.th}>{h}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(c => {
-                  const v = calcVagas(c.p);
-                  const anc = hasAnchor(c.n, c.e);
-                  const cityMembers = members.filter(m => m.city === c.n).length;
-                  const isSel = selCity?.n === c.n;
-                  return (
-                    <tr key={`${c.n}-${c.e}`} onClick={() => setSelCity(isSel ? null : c)}
-                      style={{ background: isSel ? "#f0fdfb" : "white", cursor: "pointer", borderBottom: "1px solid #f5f5f5" }}>
-                      <td style={S.td}>
-                        <div style={{ fontWeight: 600, fontSize: 12 }}>{c.n}</div>
-                        <div style={{ fontSize: 10, color: "#aaa" }}>{c.e} · {(c.p / 1000).toFixed(0)}k hab · {cityMembers} membro{cityMembers !== 1 ? "s" : ""}</div>
-                      </td>
-                      <td style={S.td}>
-                        <span style={{ color: C.azulPetroleo, fontWeight: 700 }}>{v.macro}</span>
-                        <span style={{ color: "#ccc" }}>/</span>
-                        <span style={{ color: C.roxo, fontWeight: 700 }}>{v.sub}</span>
-                        <span style={{ fontSize: 9, color: "#ccc" }}>sub</span>
-                        <div style={{ fontSize: 10, color: C.verdeMedio, fontWeight: 600 }}>{v.nmed} não-méd</div>
-                      </td>
-                      <td style={S.td}>{anc ? <span style={{ fontSize: 10, color: "#0f6e56", fontWeight: 700 }}>✓ Ativo</span> : <span style={{ fontSize: 10, color: "#ba7517", fontWeight: 600 }}>⚡ Necessário</span>}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      <div style={{ position: "relative", marginBottom: 16, maxWidth: 320 }}>
+        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#aaa" }}>{I.search}</span>
+        <input style={{ ...S.input, paddingLeft: 28, height: 34, fontSize: 13 }}
+          placeholder="Buscar cidade..." value={search}
+          onChange={function(e) { setSearch(e.target.value); }} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr 1.6fr" : "repeat(auto-fill,minmax(220px,1fr))", gap: 14, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr" : "repeat(auto-fill,minmax(220px,1fr))", gap: 10 }}>
+          {filtered.map(function(c) {
+            var used = getCityCount(c.n);
+            var cv = calcVagas2(c.p);
+            var pct = Math.min(100, Math.round((used / Math.max(1, cv.macro * 2)) * 100));
+            var isSel = selCity && selCity.n === c.n;
+            return (
+              <div key={c.n} onClick={function() { setSelCity(isSel ? null : c); }}
+                style={{ ...S.card, cursor: "pointer", border: isSel ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5", background: isSel ? C.azulPetroleo + "08" : "#fff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{c.n}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>{c.e} - {Math.round(c.p / 1000)}k hab</div>
+                  </div>
+                  <span style={{ fontSize: 12, background: used > 0 ? C.azulPetroleo + "15" : "#f7f7f5", color: used > 0 ? C.azulPetroleo : "#aaa", borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>
+                    {used} membros
+                  </span>
+                </div>
+                <div style={{ width: "100%", height: 5, background: "#f0f0f0", borderRadius: 99 }}>
+                  <div style={{ height: "100%", background: pct >= 80 ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: pct + "%" }} />
+                </div>
+                <div style={{ fontSize: 10, color: "#aaa", marginTop: 4 }}>{pct}% preenchido</div>
+              </div>
+            );
+          })}
         </div>
 
-        {selCity && (() => {
-          const v = calcVagas(selCity.p);
-          const cityMembers = members.filter(m => m.city === selCity.n);
-          const getMacroUsed = (esp) => cityMembers.filter(m => m.specialty === esp && !m.subspecialty).length;
-          const getSubUsed = (esp) => cityMembers.filter(m => m.specialty === esp && m.subspecialty).length;
-          const getNmedUsed = (esp) => cityMembers.filter(m => m.specialty === esp).length;
-
-          return (
-            <div>
-              <div style={{ background: `linear-gradient(135deg,${C.noite},${C.azulPetroleo})`, borderRadius: 12, padding: "16px 18px", color: "#fff", marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <div>
-                    <div style={{ fontSize: 17, fontWeight: 800 }}>{selCity.n} — {selCity.e}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{(selCity.p / 1000).toFixed(0)}k hab · {cityMembers.length} membro{cityMembers.length !== 1 ? "s" : ""} ativo{cityMembers.length !== 1 ? "s" : ""}</div>
-                  </div>
-                  <button onClick={() => setSelCity(null)} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}>✕</button>
+        {selCity && vg && (
+          <div>
+            <div style={{ background: "linear-gradient(135deg," + C.noite + "," + C.azulPetroleo + ")", borderRadius: 12, padding: "16px 18px", color: "#fff", marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>{selCity.n} - {selCity.e}</div>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>{cityMems.length} membros ativos</div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6, marginTop: 12 }}>
-                  {[{ l: "Macroesp.", v: v.macro, c: C.verdeMedio }, { l: "Subesp.", v: v.sub, c: "#a78bfa" }, { l: "Não-méd.", v: v.nmed, c: "#fbbf24" }].map(s => (
-                    <div key={s.l} style={{ background: "rgba(255,255,255,0.1)", borderRadius: 7, padding: "7px 10px" }}>
-                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.5)" }}>{s.l}</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: s.c }}>{s.v}</div>
-                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)" }}>por especialidade</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Especialidades médicas */}
-              <div style={{ ...S.card, marginBottom: 12, padding: "12px 14px" }}>
-                <h4 style={{ fontSize: 12, fontWeight: 700, margin: "0 0 10px" }}>Especialidades Médicas</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto" }}>
-                  {VAGAS_CONFIG.medicas.map(esp => {
-                    const macroUsed = getMacroUsed(esp);
-                    const subUsed = getSubUsed(esp);
-                    const totalUsed = macroUsed + subUsed;
-                    const livre = Math.max(0, v.macro - macroUsed);
-                    const subLivre = Math.max(0, v.sub - subUsed);
-                    const membersInEsp = cityMembers.filter(m => m.specialty === esp);
-                    return (
-                      <div key={esp} style={{ background: "#fafafa", borderRadius: 7, padding: "6px 10px", border: "1px solid #f0f0f0" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600 }}>{esp}</span>
-                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                            {livre === 0 && totalUsed > 0 && <span style={{ fontSize: 10, color: "#EF4444", fontWeight: 700 }}>CHEIO</span>}
-                            <span style={{ fontSize: 10, color: "#aaa" }}>{totalUsed}/{v.macro} geral · {subUsed}/{v.sub} sub</span>
-                          </div>
-                        </div>
-                        <div style={{ height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: 4 }}>
-                          <div style={{ height: "100%", background: livre === 0 ? "#EF4444" : C.verdeMedio, borderRadius: 99, width: `${Math.min(100, (totalUsed / v.macro) * 100)}%` }} />
-                        </div>
-                        {membersInEsp.length > 0 && (
-                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                            {membersInEsp.map(m => (
-                              <span key={m.id} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 99, background: m.subspecialty ? "#fff0f0" : "#f0f0f0", color: m.subspecialty ? "#EF4444" : "#555", fontWeight: m.subspecialty ? 700 : 400 }}>
-                                {m.name.split(" ").slice(0, 2).join(" ")}{m.subspecialty ? ` (${m.subspecialty})` : ""}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Não médicas */}
-              <div style={{ ...S.card, padding: "12px 14px" }}>
-                <h4 style={{ fontSize: 12, fontWeight: 700, margin: "0 0 10px" }}>Profissões Não Médicas</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {VAGAS_CONFIG.naoMedicas.map(esp => {
-                    const used = getNmedUsed(esp);
-                    const livre = Math.max(0, v.nmed - used);
-                    return (
-                      <div key={esp} style={{ background: "#fafafa", borderRadius: 7, padding: "6px 10px", border: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, flex: 1 }}>{esp}</span>
-                        <div style={{ width: 80, height: 4, background: "#f0f0f0", borderRadius: 99 }}>
-                          <div style={{ height: "100%", background: livre === 0 ? "#EF4444" : C.verdeMedio, borderRadius: 99, width: `${Math.min(100, (used / v.nmed) * 100)}%` }} />
-                        </div>
-                        <span style={{ fontSize: 10, color: livre === 0 ? "#EF4444" : "#aaa", fontWeight: livre === 0 ? 700 : 400, minWidth: 60, textAlign: "right" }}>
-                          {used}/{v.nmed} {livre === 0 ? "CHEIO" : `(${livre} livre${livre !== 1 ? "s" : ""})`}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div style={{ marginTop: 10, background: "#f0faf4", borderRadius: 7, padding: "7px 10px", fontSize: 11, color: "#0f6e56", borderLeft: `3px solid ${C.verdeMedio}` }}>
-                  💡 Subespecialistas aparecem em <span style={{ color: "#EF4444", fontWeight: 700 }}>vermelho</span> — ocupam vaga de subespecialidade, liberando vaga geral.
-                </div>
+                <button onClick={function() { setSelCity(null); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>
+                  Fechar
+                </button>
               </div>
             </div>
-          );
-        })()}
+
+            <div style={{ ...S.card, marginBottom: 10 }}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.azulPetroleo }}>Especialidades Medicas</h4>
+              {VAGAS_CONFIG.medicas.map(function(esp) {
+                var used = getMUsed(esp);
+                return renderRow(esp, used, vg.macro, function() { onNav && onNav("leads", { city: selCity.n, spec: esp }); });
+              })}
+            </div>
+
+            <div style={S.card}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.verdeMedio }}>Especialidades Nao Medicas</h4>
+              {VAGAS_CONFIG.naoMedicas.map(function(esp) {
+                var used = getMUsed(esp);
+                return renderRow(esp, used, vg.nmed, function() { onNav && onNav("leads", { city: selCity.n, spec: esp }); });
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
 
 // ─── GERADOR DE LEADS IA ──────────────────────────────────────────────────────
 const SUBESP_G = { "Cardiologia": ["Eletrofisiologia", "Cardiologia intervencionista", "Insuficiência cardíaca", "Cardiologia esportiva"], "Dermatologia": ["Dermatoscopia", "Tricologia", "Dermato-oncologia"], "Endocrinologia": ["Diabetes mellitus", "Tireoide", "Obesidade e metabolismo"], "Gastroenterologia": ["Endoscopia digestiva", "Hepatologia", "Doenças inflamatórias"], "Ginecologia e Obstetrícia": ["Medicina fetal", "Endometriose", "Reprodução assistida", "Mastologia"], "Neurologia": ["AVC", "Epilepsia", "Demências", "Parkinson", "Cefaleias"], "Oncologia": ["Onco-hematologia", "Imunoterapia", "Oncologia mamária"], "Ortopedia": ["Joelho", "Coluna vertebral", "Quadril", "Trauma"], "Psiquiatria": ["Transtornos do humor", "Ansiedade e TOC", "Dependência química"], "Urologia": ["Uro-oncologia", "Andrologia", "Litíase"], "Oftalmologia": ["Retina", "Córnea", "Glaucoma"], "Cirurgia Geral": ["Laparoscopia", "Cirurgia bariátrica", "Colorretal"], "Nutrição": ["Nutrição esportiva", "Nutrição clínica", "TCA"], "Psicologia": ["TCC", "Neuropsicologia", "ABA e TEA"], "Fisioterapia": ["Ortopédica", "Neurológica", "Pélvica"], "Fonoaudiologia": ["Disfagia", "Voz", "Linguagem infantil"] };
@@ -2077,282 +2089,271 @@ function LeadGenerator({ onNav }) {
   );
 }
 
+
 // ─── CALENDÁRIO ───────────────────────────────────────────────────────────────
 const MEETING_TYPES = {
-  prospect:   { label: "Prospect / Novo contato", color: "#3B82F6", bg: "#EFF6FF" },
-  membro:     { label: "Reunião com Membro",       color: "#10B981", bg: "#F0FDF4" },
-  curadoria:  { label: "Curadoria",                color: "#F59E0B", bg: "#FFFBEB" },
-  comercial:  { label: "Ação Comercial",           color: "#8B5CF6", bg: "#F5F3FF" },
-  outro:      { label: "Outro",                    color: "#94A3B8", bg: "#F8FAFC" },
+  comercial: { label: "Ação Comercial",     color: "#8B5CF6", bg: "#F5F3FF" },
+  prospect:  { label: "Prospect",           color: "#3B82F6", bg: "#EFF6FF" },
+  membro:    { label: "Reunião com Membro", color: "#10B981", bg: "#F0FDF4" },
+  curadoria: { label: "Curadoria",          color: "#F59E0B", bg: "#FFFBEB" },
+  outro:     { label: "Outro",              color: "#94A3B8", bg: "#F8FAFC" },
 };
 
-function CalendarPage() {
-  const [meetings, setMeetings] = useState(() => {
-    const stored = DB.get("meetings", []);
-    // Also pull from commercial stage "reuniao_agendada"
-    const commercial = DB.get("contacts", []);
-    const autoMeetings = commercial
-      .filter(c => c.stage === "comercial_reuniao" && c.meetingDate)
-      .map(c => ({
-        id: "auto_" + c.id,
-        title: `Reunião — ${c.name}`,
-        leadName: c.name,
-        specialty: c.specialty,
-        city: c.city,
-        type: "prospect",
-        scheduledAt: c.meetingDate,
-        status: "agendada",
-        auto: true,
-      }));
-    // Merge, dedup by id
-    const ids = new Set(stored.map(m => String(m.id)));
-    return [...stored, ...autoMeetings.filter(m => !ids.has(String(m.id)))];
-  });
-  const [view, setView] = useState("month"); // month | week | list
-  const [currentDate, setCurrentDate] = useState(new Date());
+const MONTHS_PT2 = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const DAYS_PT2 = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+
+function Calendar() {
+  const [meetings, setMeetings] = useState(() => DB.get("meetings", []));
+  const [view, setView] = useState("month");
+  const [now, setNow] = useState(new Date());
   const [showAdd, setShowAdd] = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const [selMeeting, setSelMeeting] = useState(null);
-  const [form, setForm] = useState({ title: "", leadName: "", specialty: "", city: "", type: "prospect", scheduledAt: "", notes: "" });
+  const [form, setForm] = useState({ title: "", date: "", time: "", type: "comercial", format: "online", link: "", address: "", notes: "", contactName: "" });
 
-  const saveMeetings = d => { setMeetings(d); DB.set("meetings", d.filter(m => !m.auto)); };
+  const year = now.getFullYear();
+  const month = now.getMonth();
 
-  function addMeeting() {
-    if (!form.title || !form.scheduledAt) return alert("Preencha título e data");
-    const m = { ...form, id: Date.now(), status: "agendada", createdAt: new Date().toISOString() };
-    saveMeetings([...meetings, m]);
-    setShowAdd(false);
-    showToast("Reunião agendada ✓");
-    setForm({ title: "", leadName: "", specialty: "", city: "", type: "prospect", scheduledAt: "", notes: "" });
+  const saveMeetings = m => { setMeetings(m); DB.set("meetings", m); };
+
+  function openAdd(dateStr) {
+    setForm({ title: "", date: dateStr || "", time: "", type: "comercial", format: "online", link: "", address: "", notes: "", contactName: "" });
+    setEditItem(null);
+    setShowAdd(true);
   }
 
-  function deleteMeeting(id) {
-    if (confirm("Remover reunião?")) saveMeetings(meetings.filter(m => m.id !== id));
+  function openEdit(m) {
+    setForm({ ...m });
+    setEditItem(m.id);
+    setShowAdd(true);
+  }
+
+  function saveMeeting() {
+    if (!form.title.trim()) return alert("Informe o título");
+    if (!form.date) return alert("Informe a data");
+    if (editItem) {
+      saveMeetings(meetings.map(m => m.id === editItem ? { ...form, id: editItem } : m));
+      showToast("Reunião atualizada!");
+    } else {
+      saveMeetings([...meetings, { ...form, id: Date.now() + Math.random(), createdAt: new Date().toISOString() }]);
+      showToast("Reunião agendada!");
+    }
+    setShowAdd(false);
     setSelMeeting(null);
   }
 
-  // Calendar helpers
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const today = new Date();
-
-  function getDaysInMonth(y, m) {
-    return new Date(y, m + 1, 0).getDate();
-  }
-  function getFirstDayOfMonth(y, m) {
-    return new Date(y, m, 1).getDay();
+  function deleteMeeting(id) {
+    if (!confirm("Excluir esta reunião?")) return;
+    saveMeetings(meetings.filter(m => m.id !== id));
+    setSelMeeting(null);
+    showToast("Reunião excluída");
   }
 
-  const daysInMonth = getDaysInMonth(year, month);
-  const firstDay = getFirstDayOfMonth(year, month);
-  const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-  const dayNames = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-
-  function getMeetingsForDay(day) {
+  function getMeetingsForDay(d) {
     return meetings.filter(m => {
-      if (!m.scheduledAt) return false;
-      const d = new Date(m.scheduledAt);
-      return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+      if (!m.date) return false;
+      const md = new Date(m.date + "T12:00:00");
+      return md.getFullYear() === year && md.getMonth() === month && md.getDate() === d;
     });
   }
 
-  const upcomingMeetings = [...meetings]
-    .filter(m => m.scheduledAt && new Date(m.scheduledAt) >= today)
-    .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
+  function getUpcoming() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    return meetings
+      .filter(m => m.date && new Date(m.date + "T12:00:00") >= today)
+      .sort((a,b) => new Date(a.date + "T" + (a.time || "00:00")) - new Date(b.date + "T" + (b.time || "00:00")));
+  }
 
-  const pastMeetings = [...meetings]
-    .filter(m => m.scheduledAt && new Date(m.scheduledAt) < today)
-    .sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt));
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
 
   return (
     <div>
       <div style={S.topbar}>
         <div>
           <h1 style={S.sectionTitle}>Calendário</h1>
-          <p style={S.sectionSub}>{upcomingMeetings.length} reuniões agendadas</p>
+          <p style={S.sectionSub}>{meetings.length} reuniões cadastradas</p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <div style={{ display: "flex", background: "#f0f0f0", borderRadius: 8, padding: 2, gap: 2 }}>
-            {[["month","Mês"],["list","Lista"]].map(([v,l]) => (
-              <button key={v} onClick={() => setView(v)}
-                style={{ padding: "5px 12px", fontSize: 12, fontWeight: view === v ? 700 : 400, borderRadius: 6, border: "none", cursor: "pointer", background: view === v ? "#fff" : "transparent", color: view === v ? C.azulPetroleo : "#888", boxShadow: view === v ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>
-                {l}
-              </button>
-            ))}
-          </div>
-          <button style={S.btnP} onClick={() => setShowAdd(true)}>{I.plus} Agendar reunião</button>
-        </div>
+        <button style={S.btnP} onClick={() => openAdd("")}>{I.plus} Nova reunião</button>
       </div>
 
-      {/* Legenda de cores */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        {Object.entries(MEETING_TYPES).map(([k, v]) => (
-          <span key={k} style={{ fontSize: 11, background: v.bg, color: v.color, border: `1px solid ${v.color}30`, borderRadius: 99, padding: "3px 10px", fontWeight: 600 }}>
-            ● {v.label}
-          </span>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {["month","list"].map(v => (
+          <button key={v} onClick={() => setView(v)}
+            style={{ padding: "6px 16px", fontSize: 13, fontWeight: view === v ? 700 : 400, borderRadius: 8, border: view === v ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5", background: view === v ? C.azulPetroleo + "10" : "#fff", color: view === v ? C.azulPetroleo : "#555", cursor: "pointer" }}>
+            {v === "month" ? "📅 Mensal" : "📋 Lista"}
+          </button>
         ))}
       </div>
 
-      {/* VISUALIZAÇÃO MENSAL */}
       {view === "month" && (
-        <div style={S.card}>
-          {/* Navegação */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <button style={S.btnO} onClick={() => setCurrentDate(new Date(year, month - 1, 1))}>‹ Anterior</button>
-            <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>{monthNames[month]} {year}</h3>
-            <button style={S.btnO} onClick={() => setCurrentDate(new Date(year, month + 1, 1))}>Próximo ›</button>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+            <button onClick={() => setNow(new Date(year, month - 1, 1))} style={{ ...S.btnO, padding: "5px 12px" }}>{"<"}</button>
+            <span style={{ fontSize: 16, fontWeight: 700, minWidth: 180, textAlign: "center" }}>{MONTHS_PT2[month]} {year}</span>
+            <button onClick={() => setNow(new Date(year, month + 1, 1))} style={{ ...S.btnO, padding: "5px 12px" }}>{">"}</button>
+            <button onClick={() => setNow(new Date())} style={{ ...S.btnO, fontSize: 11, height: 30 }}>Hoje</button>
           </div>
-          {/* Cabeçalho dias */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
-            {dayNames.map(d => (
-              <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "#aaa", padding: "4px 0" }}>{d}</div>
-            ))}
-          </div>
-          {/* Grid dias */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-            {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} style={{ minHeight: 70 }} />)}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1;
-              const dayMeetings = getMeetingsForDay(day);
-              const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
-              return (
-                <div key={day} style={{ minHeight: 70, background: isToday ? C.azulPetroleo + "08" : "#fafafa", borderRadius: 8, padding: "4px 5px", border: isToday ? `1.5px solid ${C.azulPetroleo}` : "1px solid #f0f0f0" }}>
-                  <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 400, color: isToday ? C.azulPetroleo : "#333", marginBottom: 3 }}>{day}</div>
-                  {dayMeetings.slice(0, 2).map(m => (
-                    <div key={m.id} onClick={() => setSelMeeting(m)}
-                      style={{ fontSize: 9, background: MEETING_TYPES[m.type]?.color || "#888", color: "#fff", borderRadius: 4, padding: "2px 4px", marginBottom: 2, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {new Date(m.scheduledAt).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} {m.title}
-                    </div>
-                  ))}
-                  {dayMeetings.length > 2 && <div style={{ fontSize: 9, color: "#aaa" }}>+{dayMeetings.length - 2}</div>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
-      {/* VISUALIZAÇÃO LISTA */}
-      {view === "list" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <div style={S.card}>
-            <h3 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 14px", color: C.azulPetroleo }}>
-              ▸ Próximas reuniões ({upcomingMeetings.length})
-            </h3>
-            {upcomingMeetings.length > 0 ? upcomingMeetings.map(m => {
-              const d = new Date(m.scheduledAt);
-              const cfg = MEETING_TYPES[m.type] || MEETING_TYPES.outro;
-              return (
-                <div key={m.id} onClick={() => setSelMeeting(m)}
-                  style={{ display: "flex", gap: 10, padding: "10px 0", borderBottom: "1px solid #f5f5f5", cursor: "pointer" }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 9, background: cfg.bg, border: `1.5px solid ${cfg.color}30`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: cfg.color, lineHeight: 1 }}>{d.getDate()}</span>
-                    <span style={{ fontSize: 9, color: cfg.color, lineHeight: 1 }}>{monthNames[d.getMonth()].slice(0,3)}</span>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 600, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</p>
-                    <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>
-                      {d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} ·{" "}
-                      <span style={{ color: cfg.color, fontWeight: 600 }}>{cfg.label}</span>
-                      {m.city && ` · ${m.city}`}
-                    </p>
-                  </div>
-                </div>
-              );
-            }) : <p style={{ fontSize: 12, color: "#aaa", textAlign: "center", padding: "24px 0" }}>Nenhuma reunião agendada</p>}
-          </div>
-          <div style={S.card}>
-            <h3 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 14px", color: "#888" }}>
-              ✓ Realizadas ({pastMeetings.length})
-            </h3>
-            {pastMeetings.slice(0, 10).map(m => {
-              const d = new Date(m.scheduledAt);
-              const cfg = MEETING_TYPES[m.type] || MEETING_TYPES.outro;
-              return (
-                <div key={m.id} onClick={() => setSelMeeting(m)}
-                  style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: "1px solid #f5f5f5", cursor: "pointer", opacity: 0.65 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 8, background: "#f7f7f5", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#aaa", lineHeight: 1 }}>{d.getDate()}</span>
-                    <span style={{ fontSize: 9, color: "#ccc", lineHeight: 1 }}>{monthNames[d.getMonth()].slice(0,3)}</span>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 500, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</p>
-                    <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · <span style={{ color: cfg.color }}>{cfg.label}</span></p>
-                  </div>
-                </div>
-              );
-            })}
-            {pastMeetings.length === 0 && <p style={{ fontSize: 12, color: "#aaa", textAlign: "center", padding: "24px 0" }}>Nenhuma reunião realizada</p>}
-          </div>
-        </div>
-      )}
-
-      {/* Modal detalhe reunião */}
-      {selMeeting && (
-        <div style={S.modal} onClick={() => setSelMeeting(null)}>
-          <div style={{ ...S.modalBox, maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 10, background: MEETING_TYPES[selMeeting.type]?.bg, border: `2px solid ${MEETING_TYPES[selMeeting.type]?.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
-                📅
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 3px" }}>{selMeeting.title}</h3>
-                <span style={{ fontSize: 11, background: MEETING_TYPES[selMeeting.type]?.bg, color: MEETING_TYPES[selMeeting.type]?.color, borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>
-                  {MEETING_TYPES[selMeeting.type]?.label}
-                </span>
-              </div>
-              <button style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa" }} onClick={() => setSelMeeting(null)}>{I.x}</button>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", marginBottom: 14, fontSize: 12 }}>
-              {[
-                ["Data e hora", new Date(selMeeting.scheduledAt).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})],
-                ["Profissional", selMeeting.leadName],
-                ["Especialidade", selMeeting.specialty],
-                ["Cidade", selMeeting.city],
-                ["Notas", selMeeting.notes],
-              ].filter(([,v]) => v).map(([l, v]) => (
-                <div key={l}><span style={{ fontSize: 10, color: "#aaa", fontWeight: 700, textTransform: "uppercase" }}>{l}</span><p style={{ margin: "1px 0 0" }}>{v}</p></div>
+          <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", background: C.noite }}>
+              {DAYS_PT2.map(d => (
+                <div key={d} style={{ padding: "10px 0", textAlign: "center", fontSize: 12, fontWeight: 700, color: "#fff" }}>{d}</div>
               ))}
             </div>
-            {!selMeeting.auto && (
-              <button style={S.btnD} onClick={() => deleteMeeting(selMeeting.id)}>{I.trash} Remover reunião</button>
-            )}
-            {selMeeting.auto && <p style={{ fontSize: 11, color: "#aaa", fontStyle: "italic" }}>Reunião gerada automaticamente do pipeline Comercial.</p>}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
+              {Array.from({ length: firstDay }).map((_, i) => (
+                <div key={"empty-" + i} style={{ minHeight: 80, borderRight: "1px solid #f0f0f0", borderBottom: "1px solid #f0f0f0", background: "#fafafa" }} />
+              ))}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const dayMeetings = getMeetingsForDay(day);
+                const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
+                return (
+                  <div key={day} onClick={() => openAdd(year + "-" + String(month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0"))}
+                    style={{ minHeight: 80, borderRight: "1px solid #f0f0f0", borderBottom: "1px solid #f0f0f0", padding: 4, cursor: "pointer", background: isToday ? C.azulPetroleo + "05" : "#fff" }}>
+                    <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 400, color: isToday ? C.azulPetroleo : "#333", width: 22, height: 22, borderRadius: "50%", background: isToday ? C.azulPetroleo : "transparent", color: isToday ? "#fff" : "#333", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 2 }}>{day}</div>
+                    {dayMeetings.slice(0,3).map(m => {
+                      const cfg = MEETING_TYPES[m.type] || MEETING_TYPES.outro;
+                      const fs = dayMeetings.length <= 2 ? 11 : 9;
+                      return (
+                        <div key={m.id} onClick={e => { e.stopPropagation(); setSelMeeting(m); }}
+                          style={{ fontSize: fs, background: cfg.bg, color: "#0D2233", borderRadius: 4, padding: dayMeetings.length <= 2 ? "2px 5px" : "1px 4px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 700, cursor: "pointer", border: "1px solid " + cfg.color + "40" }}>
+                          {m.time ? m.time + " " : ""}{m.title}
+                        </div>
+                      );
+                    })}
+                    {dayMeetings.length > 3 && <div style={{ fontSize: 9, color: "#888", fontWeight: 600 }}>+{dayMeetings.length - 3} mais</div>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal adicionar */}
+      {view === "list" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {getUpcoming().length === 0 && (
+            <div style={{ ...S.card, textAlign: "center", padding: "48px 20px", color: "#aaa" }}>
+              <p style={{ fontSize: 32, margin: "0 0 10px" }}>📅</p>
+              <p>Nenhuma reunião próxima. Clique em Nova reunião para agendar.</p>
+            </div>
+          )}
+          {getUpcoming().map(m => {
+            const cfg = MEETING_TYPES[m.type] || MEETING_TYPES.outro;
+            const d = new Date(m.date + "T12:00:00");
+            const isToday = d.toDateString() === new Date().toDateString();
+            return (
+              <div key={m.id} style={{ ...S.card, borderLeft: "3px solid " + cfg.color, padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{m.title}</span>
+                      <span style={{ fontSize: 11, background: cfg.bg, color: cfg.color, borderRadius: 99, padding: "1px 8px", fontWeight: 600 }}>{cfg.label}</span>
+                      {isToday && <span style={{ fontSize: 11, background: "#FEF3C7", color: "#92400E", borderRadius: 99, padding: "1px 8px", fontWeight: 700 }}>HOJE</span>}
+                    </div>
+                    <div style={{ display: "flex", gap: 12, fontSize: 12, color: "#666", flexWrap: "wrap" }}>
+                      <span>📅 {d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}{m.time ? " às " + m.time : ""}</span>
+                      <span>{m.format === "online" ? "💻 Online" : "📍 Presencial"}</span>
+                      {m.contactName && <span>👤 {m.contactName}</span>}
+                    </div>
+                    {m.link && <a href={m.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: C.azulPetroleo, display: "block", marginTop: 4 }}>🔗 {m.link}</a>}
+                    {m.address && <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>📍 {m.address}</div>}
+                    {m.notes && <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>📝 {m.notes}</div>}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                    <button onClick={() => openEdit(m)} style={{ fontSize: 11, background: C.azulPetroleo + "15", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "30", borderRadius: 6, padding: "5px 10px", cursor: "pointer" }}>Editar</button>
+                    <button onClick={() => deleteMeeting(m.id)} style={{ fontSize: 11, background: "#fff0f0", color: "#a32d2d", border: "1px solid #fca5a5", borderRadius: 6, padding: "5px 8px", cursor: "pointer" }}>{I.trash}</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {selMeeting && (
+        <div style={S.modal} onClick={() => setSelMeeting(null)}>
+          <div style={{ ...S.modalBox, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            {(() => {
+              const cfg = MEETING_TYPES[selMeeting.type] || MEETING_TYPES.outro;
+              const d = new Date(selMeeting.date + "T12:00:00");
+              return (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px" }}>{selMeeting.title}</h3>
+                      <span style={{ fontSize: 12, background: cfg.bg, color: cfg.color, borderRadius: 99, padding: "2px 10px", fontWeight: 600 }}>{cfg.label}</span>
+                    </div>
+                    <button style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: 18 }} onClick={() => setSelMeeting(null)}>{I.x}</button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, marginBottom: 16 }}>
+                    <div>📅 {d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}{selMeeting.time ? " às " + selMeeting.time : ""}</div>
+                    <div>{selMeeting.format === "online" ? "💻 Online" : "📍 Presencial"}</div>
+                    {selMeeting.contactName && <div>👤 {selMeeting.contactName}</div>}
+                    {selMeeting.link && <div>🔗 <a href={selMeeting.link} target="_blank" rel="noreferrer" style={{ color: C.azulPetroleo }}>{selMeeting.link}</a></div>}
+                    {selMeeting.address && <div>📍 {selMeeting.address}</div>}
+                    {selMeeting.notes && <div>📝 {selMeeting.notes}</div>}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={S.btnP} onClick={() => { openEdit(selMeeting); setSelMeeting(null); }}>Editar</button>
+                    <button style={{ ...S.btnO, color: "#a32d2d", borderColor: "#fca5a5" }} onClick={() => deleteMeeting(selMeeting.id)}>Excluir</button>
+                    <button style={S.btnO} onClick={() => setSelMeeting(null)}>Fechar</button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {showAdd && (
         <div style={S.modal} onClick={() => setShowAdd(false)}>
-          <div style={S.modalBox} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 18px" }}>Agendar Reunião</h3>
+          <div style={{ ...S.modalBox, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 18px" }}>{editItem ? "Editar Reunião" : "Nova Reunião"}</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-              <div><label style={S.lbl}>Título *</label><input style={S.input} value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="ex: Apresentação PARTIC — Dr. Nome" /></div>
+              <div><label style={S.lbl}>Título *</label><input style={S.input} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Reunião com Dr. João" /></div>
+              <div><label style={S.lbl}>Profissional/Contato</label><input style={S.input} value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} placeholder="Nome do profissional" /></div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div><label style={S.lbl}>Data e hora *</label><input style={S.input} type="datetime-local" value={form.scheduledAt} onChange={e => setForm(p => ({ ...p, scheduledAt: e.target.value }))} /></div>
-                <div><label style={S.lbl}>Tipo de reunião</label>
-                  <select style={S.select} value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}>
-                    {Object.entries(MEETING_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                  </select>
-                </div>
-                <div><label style={S.lbl}>Profissional</label><input style={S.input} value={form.leadName} onChange={e => setForm(p => ({ ...p, leadName: e.target.value }))} /></div>
-                <div><label style={S.lbl}>Cidade</label><input style={S.input} value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} /></div>
+                <div><label style={S.lbl}>Data *</label><input type="date" style={S.input} value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></div>
+                <div><label style={S.lbl}>Horário</label><input type="time" style={S.input} value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} /></div>
               </div>
-              <div><label style={S.lbl}>Notas</label><textarea style={{ ...S.input, height: 70, resize: "none" }} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></div>
+              <div><label style={S.lbl}>Tipo</label>
+                <select style={S.select} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                  {Object.entries(MEETING_TYPES).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={S.lbl}>Formato</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {["online","presencial"].map(t => (
+                    <button key={t} onClick={() => setForm(f => ({ ...f, format: t }))}
+                      style={{ flex: 1, padding: "8px", fontSize: 13, fontWeight: form.format === t ? 700 : 400, borderRadius: 8, border: form.format === t ? "2px solid " + C.azulPetroleo : "1px solid #ddd", background: form.format === t ? C.azulPetroleo + "10" : "#fff", cursor: "pointer", color: form.format === t ? C.azulPetroleo : "#555" }}>
+                      {t === "online" ? "💻 Online" : "📍 Presencial"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {form.format === "online" && <div><label style={S.lbl}>Link</label><input style={S.input} value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://meet.google.com/..." /></div>}
+              {form.format === "presencial" && <div><label style={S.lbl}>Endereço</label><input style={S.input} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>}
+              <div><label style={S.lbl}>Observações</label><textarea style={{ ...S.input, height: 60, resize: "none" }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={S.btnP} onClick={addMeeting}>Agendar</button>
+              <button style={S.btnP} onClick={saveMeeting}>{editItem ? "Atualizar" : "Agendar"}</button>
               <button style={S.btnO} onClick={() => setShowAdd(false)}>Cancelar</button>
             </div>
           </div>
         </div>
-      )}
       )}
     </div>
   );
 }
 
 
+// ─── MEMBROS ──────────────────────────────────────────────────────────────────
+
+// ─── CALENDÁRIO ───────────────────────────────────────────────────────────────
 // ─── ARQUIVO ──────────────────────────────────────────────────────────────────
 function Arquivo() {
   const [tab, setTab] = useState("reprovados");
@@ -2634,13 +2635,35 @@ function Importacao({ onNav }) {
   }
 
   function normContact(raw, dest) {
+    // Auto-detect city from address if city is empty
+    let cityVal = (raw.city || "").trim();
+    if (!cityVal && raw.address) {
+      const addr = raw.address.toLowerCase();
+      const cityMap = [
+        ["ribeirao preto", "Ribeirão Preto"], ["uberlandia", "Uberlândia"],
+        ["sao jose do rio preto", "São José do Rio Preto"], ["bauru", "Bauru"],
+        ["uberaba", "Uberaba"], ["presidente prudente", "Presidente Prudente"],
+        ["campinas", "Campinas"], ["bonfim paulista", "Bonfim Paulista"],
+        ["tres coracoes", "Três Corações"], ["tres coracões", "Três Corações"],
+      ];
+      for (const [key, label] of cityMap) {
+        if (addr.includes(key)) { cityVal = label; break; }
+      }
+    }
+    // Extract city from "CidadeNome-SP" format
+    if (cityVal && cityVal.includes("-")) {
+      const parts = cityVal.split("-");
+      if (parts[parts.length-1].trim().length === 2) {
+        cityVal = parts.slice(0, -1).join("-").trim();
+      }
+    }
     const base = {
       id: Date.now() + Math.random(),
       name: (raw.name || "").trim(),
       specialty: (raw.specialty || "").trim(),
       subspecialty: (raw.subspecialty || "").trim(),
       profession: (raw.profession || "Medico").trim(),
-      city: (raw.city || "").trim(),
+      city: cityVal,
       state: (raw.state || "").trim(),
       email: (raw.email || "").trim(),
       instagram: (raw.instagram || "").trim(),
@@ -4372,6 +4395,11 @@ function CentralOperacional() {
 
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
 function Sidebar({ page, onNav, user }) {
+  const todayMeetings = (() => {
+    const meetings = DB.get("meetings", []);
+    const today = new Date().toISOString().slice(0, 10);
+    return meetings.filter(m => m.date === today).length;
+  })();
   const _sidebarContacts = DB.get("contacts", []);
   const inEval = _sidebarContacts.filter(c => c.stage === "curadoria_avaliacao").length;
   const [membersOpen, setMembersOpen] = useState(["members", "anchors", "member_pipeline"].includes(page));
@@ -4404,7 +4432,7 @@ function Sidebar({ page, onNav, user }) {
           { id: "leads", label: "Leads", icon: I.leads },
           { id: "curadoria", label: "Curadoria", icon: I.curadoria, badge: inEval },
           { id: "comercial", label: "Comercial", icon: I.comercial },
-          { id: "calendar", label: "Calendário", icon: I.calendar },
+          { id: "calendar", label: "Calendário", icon: I.calendar, badge: todayMeetings },
         ].map(item => (
           <button key={item.id} style={navItemStyle(page === item.id)} onClick={() => onNav(item.id)}>
             <span style={{ flexShrink: 0 }}>{item.icon}</span>
@@ -4564,17 +4592,99 @@ function Diagnostic({ onComplete }) {
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
-export default function App() {
-  const [user] = useState({ id: 1, name: "Karine Rodrigues", email: "karine@partic.com.br", role: "admin" });
+const CREDENTIALS = [
+  { email: "karine@partic.com.br", password: "Partic2025", name: "Karine Rodrigues", role: "admin" },
+];
 
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+
+  function handleLogin(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setTimeout(() => {
+      const user = CREDENTIALS.find(c => c.email.toLowerCase() === email.toLowerCase().trim() && c.password === password);
+      if (user) {
+        onLogin(user);
+      } else {
+        setError("Email ou senha incorretos.");
+        setLoading(false);
+      }
+    }, 600);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0D2233 0%, #1B6B8A 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", fontFamily: "'Outfit', sans-serif" }}>
+      <div style={{ background: "#fff", borderRadius: 20, padding: "2.5rem", width: "100%", maxWidth: 420, boxShadow: "0 40px 80px rgba(13,34,51,0.4)" }}>
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <div style={{ width: 52, height: 52, background: "linear-gradient(135deg, #1B6B8A, #5BB8D4)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem", fontSize: 22, fontWeight: 800, color: "#fff" }}>P</div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0D2233", margin: "0 0 4px" }}>PARTIC Flow</h1>
+          <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Acesse sua conta para continuar</p>
+        </div>
+        <form onSubmit={handleLogin}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#0D2233", marginBottom: 6 }}>Email</label>
+            <input
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="seu@email.com" required autoFocus
+              style={{ width: "100%", padding: "12px 14px", border: "1.5px solid rgba(27,107,138,0.2)", borderRadius: 10, fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+            />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#0D2233", marginBottom: 6 }}>Senha</label>
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••" required
+                style={{ width: "100%", padding: "12px 44px 12px 14px", border: "1.5px solid rgba(27,107,138,0.2)", borderRadius: 10, fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+              />
+              <button type="button" onClick={() => setShowPass(s => !s)}
+                style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: 16 }}>
+                {showPass ? "🙈" : "👁"}
+              </button>
+            </div>
+          </div>
+          {error && <div style={{ background: "#fff0f0", color: "#a32d2d", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 14, border: "1px solid #fca5a5" }}>{error}</div>}
+          <button type="submit" disabled={loading}
+            style={{ width: "100%", padding: 14, background: "linear-gradient(135deg, #1B6B8A, #5BB8D4)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}>
+            {loading ? "Verificando..." : "Entrar"}
+          </button>
+        </form>
+        <p style={{ textAlign: "center", fontSize: 12, color: "#aaa", marginTop: "1.5rem" }}>
+          PARTIC Flow © 2025 — Dados protegidos
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [user, setUser] = useState(() => {
+    try { const s = sessionStorage.getItem("partic_user"); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
   const [page, setPage] = useState("dashboard");
+  const [navParams, setNavParams] = useState({});
 
   useEffect(() => { initData(); }, []);
-  // Diagnostic only shown manually via menu
 
-  function handleLogout() { showToast("Logout simulado — login será reativado em breve", "info"); }
-  const [navParams, setNavParams] = useState({});
+  function handleLogin(u) {
+    try { sessionStorage.setItem("partic_user", JSON.stringify(u)); } catch {}
+    setUser(u);
+  }
+
+  function handleLogout() {
+    try { sessionStorage.removeItem("partic_user"); } catch {}
+    setUser(null);
+  }
+
   function navigate(p, params) { setPage(p); setNavParams(params || {}); }
+
+  if (!user) return <LoginScreen onLogin={handleLogin} />;
 
 
 
@@ -4583,7 +4693,7 @@ export default function App() {
     leads: <Leads onNav={navigate} initialFilters={navParams} />,
     curadoria: <Curadoria onNav={navigate} />,
     comercial: <Comercial />,
-    calendar: <CalendarPage />,
+    calendar: <Calendar />,
     members: <Members />,
     anchors: <Anchors />,
     member_pipeline: <MemberPipeline />,
@@ -4614,3 +4724,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
