@@ -4605,7 +4605,7 @@ export default function App() {
     leads: <Leads onNav={navigate} initialFilters={navParams} />,
     curadoria: <Curadoria onNav={navigate} />,
     comercial: <Comercial />,
-    calendar: <CalendarPage />,
+    calendar: <Calendar />,
     members: <Members />,
     anchors: <Anchors />,
     member_pipeline: <MemberPipeline />,
