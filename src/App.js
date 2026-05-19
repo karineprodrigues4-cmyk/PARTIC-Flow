@@ -1750,179 +1750,141 @@ function MemberPipeline() {
   );
 }
 
+
 // ─── MAPEAMENTO ───────────────────────────────────────────────────────────────
 const VAGAS_CONFIG = {
   medicas: ["Cardiologia","Dermatologia","Endocrinologia","Gastroenterologia","Ginecologia e Obstetrícia","Neurologia","Oncologia","Ortopedia","Otorrinolaringologia","Pediatria","Pneumologia","Psiquiatria","Reumatologia","Urologia","Oftalmologia","Cirurgia Geral","Cirurgia Plástica","Infectologia","Nefrologia","Hematologia"],
-  naoMedicas: ["Nutrição","Psicologia","Fisioterapia","Fonoaudiologia"],
+  naoMedicas: ["Nutrição","Psicologia","Fisioterapia","Fonoaudiologia","Odontologia","Enfermagem"],
 };
-const ANCORAS_MAP = [
-  { cidade: "Ribeirão Preto", e: "SP" }, { cidade: "Uberlândia", e: "MG" },
-  { cidade: "Presidente Prudente", e: "SP" }, { cidade: "Uberaba", e: "MG" },
-  { cidade: "São José do Rio Preto", e: "SP" }, { cidade: "Bauru", e: "SP" },
-];
+
 const CIDADES_MAP = [
-  { n: "São Paulo", e: "SP", p: 12300000 }, { n: "Rio de Janeiro", e: "RJ", p: 6700000 },
-  { n: "Belo Horizonte", e: "MG", p: 2700000 }, { n: "Brasília", e: "DF", p: 3100000 },
-  { n: "Curitiba", e: "PR", p: 1950000 }, { n: "Fortaleza", e: "CE", p: 2700000 },
-  { n: "Recife", e: "PE", p: 1650000 }, { n: "Salvador", e: "BA", p: 2900000 },
-  { n: "Porto Alegre", e: "RS", p: 1480000 }, { n: "Campinas", e: "SP", p: 1200000 },
-  { n: "Ribeirão Preto", e: "SP", p: 700000 }, { n: "Uberlândia", e: "MG", p: 700000 },
-  { n: "Florianópolis", e: "SC", p: 530000 }, { n: "Londrina", e: "PR", p: 570000 },
-  { n: "Bauru", e: "SP", p: 380000 }, { n: "São José do Rio Preto", e: "SP", p: 460000 },
-  { n: "Uberaba", e: "MG", p: 340000 }, { n: "Presidente Prudente", e: "SP", p: 230000 },
-  { n: "Manaus", e: "AM", p: 2200000 }, { n: "Goiânia", e: "GO", p: 1520000 },
+  { n: "Ribeirão Preto", e: "SP", p: 720000 },
+  { n: "Uberlândia", e: "MG", p: 706000 },
+  { n: "São José do Rio Preto", e: "SP", p: 460000 },
+  { n: "Bauru", e: "SP", p: 380000 },
+  { n: "Uberaba", e: "MG", p: 340000 },
+  { n: "Presidente Prudente", e: "SP", p: 230000 },
+  { n: "Campinas", e: "SP", p: 1200000 },
+  { n: "São Paulo", e: "SP", p: 12000000 },
+  { n: "Belo Horizonte", e: "MG", p: 2500000 },
+  { n: "Curitiba", e: "PR", p: 1900000 },
+  { n: "Porto Alegre", e: "RS", p: 1400000 },
+  { n: "Goiânia", e: "GO", p: 1500000 },
+  { n: "Manaus", e: "AM", p: 2200000 },
+  { n: "Fortaleza", e: "CE", p: 2700000 },
+  { n: "Recife", e: "PE", p: 1600000 },
+  { n: "Salvador", e: "BA", p: 2900000 },
+  { n: "Florianópolis", e: "SC", p: 520000 },
+  { n: "Brasília", e: "DF", p: 3000000 },
+  { n: "Franca", e: "SP", p: 350000 },
+  { n: "Marília", e: "SP", p: 230000 },
 ];
-function calcVagas(p) { const f = Math.pow(p / 700000, 0.6); return { macro: Math.max(2, Math.round(6 * f)), sub: Math.max(1, Math.round(3 * f)), nmed: Math.max(2, Math.round(8 * f)) }; }
+
+function calcVagas(p) {
+  const f = Math.pow(p / 700000, 0.6);
+  return {
+    macro: Math.max(2, Math.round(6 * f)),
+    sub: Math.max(1, Math.round(3 * f)),
+    nmed: Math.max(2, Math.round(8 * f)),
+  };
+}
+
+const normCity2 = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s*[\/\-,]\s*[a-z]{2}$/i,"").trim();
+const normSpec2 = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
 
 function Mapeamento({ onNav }) {
   const [selCity, setSelCity] = useState(null);
   const [search, setSearch] = useState("");
   const members = DB.get("members", []).filter(m => m.status === "active");
 
-  const filtered = CIDADES_MAP.filter(c => !search || `${c.n} ${c.e}`.toLowerCase().includes(search.toLowerCase()));
-  const normCity2 = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s*[\/\-,]\s*[a-z]{2}$/i,"").trim();
-  const hasAnchor = (n, e) => ANCORAS_MAP.some(a => a.cidade === n && a.e === e) || members.some(m => m.isAnchor && normCity2(m.city) === normCity2(n));
+  const filtered = search
+    ? CIDADES_MAP.filter(c => normCity2(c.n).includes(normCity2(search)))
+    : CIDADES_MAP;
+
+  const getCityMemberCount = (cityName) =>
+    members.filter(m => normCity2(m.city) === normCity2(cityName)).length;
 
   return (
     <div>
       <div style={S.topbar}>
         <div>
           <h1 style={S.sectionTitle}>Mapeamento de Vagas</h1>
-          <p style={S.sectionSub}>Vagas por cidade e especialidade · proporcionais a Ribeirão Preto</p>
+          <p style={S.sectionSub}>Vagas por cidade e especialidade · baseado em membros ativos</p>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr 1.4fr" : "1fr", gap: 16 }}>
-        <div>
-          <div style={{ position: "relative", marginBottom: 12 }}>
-            <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#aaa" }}>{I.search}</span>
-            <input style={{ ...S.input, paddingLeft: 28 }} placeholder="Buscar cidade..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <div style={{ ...S.card, padding: 0, overflow: "hidden", maxHeight: 560, overflowY: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f7f7f5" }}>
-                  {["Cidade", "Vagas/Esp.", "Âncora"].map(h => <th key={h} style={S.th}>{h}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(c => {
-                  const v = calcVagas(c.p);
-                  const anc = hasAnchor(c.n, c.e);
-                  const normCity = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s*[\/\-,]\s*[a-z]{2}$/i,"").trim();
-                  const cityMembers = members.filter(m => normCity(m.city) === normCity(c.n)).length;
-                  const isSel = selCity?.n === c.n;
-                  return (
-                    <tr key={`${c.n}-${c.e}`} onClick={() => setSelCity(isSel ? null : c)}
-                      style={{ background: isSel ? "#f0fdfb" : "white", cursor: "pointer", borderBottom: "1px solid #f5f5f5" }}>
-                      <td style={S.td}>
-                        <div style={{ fontWeight: 600, fontSize: 12 }}>{c.n}</div>
-                        <div style={{ fontSize: 10, color: "#aaa" }}>{c.e} · {(c.p / 1000).toFixed(0)}k hab · {cityMembers} membro{cityMembers !== 1 ? "s" : ""}</div>
-                      </td>
-                      <td style={S.td}>
-                        <span style={{ color: C.azulPetroleo, fontWeight: 700 }}>{v.macro}</span>
-                        <span style={{ color: "#ccc" }}>/</span>
-                        <span style={{ color: C.roxo, fontWeight: 700 }}>{v.sub}</span>
-                        <span style={{ fontSize: 9, color: "#ccc" }}>sub</span>
-                        <div style={{ fontSize: 10, color: C.verdeMedio, fontWeight: 600 }}>{v.nmed} não-méd</div>
-                      </td>
-                      <td style={S.td}>{anc ? <span style={{ fontSize: 10, color: "#0f6e56", fontWeight: 700 }}>✓ Ativo</span> : <span style={{ fontSize: 10, color: "#ba7517", fontWeight: 600 }}>⚡ Necessário</span>}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      <div style={{ position: "relative", marginBottom: 16, maxWidth: 320 }}>
+        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#aaa" }}>{I.search}</span>
+        <input style={{ ...S.input, paddingLeft: 28, height: 34, fontSize: 13 }}
+          placeholder="Buscar cidade..." value={search}
+          onChange={e => setSearch(e.target.value)} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr 1.6fr" : "repeat(auto-fill,minmax(220px,1fr))", gap: 14, alignItems: "start" }}>
+        
+        {/* City grid */}
+        <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr" : "repeat(auto-fill,minmax(220px,1fr))", gap: 10 }}>
+          {filtered.map(c => {
+            const v = calcVagas(c.p);
+            const used = getCityMemberCount(c.n);
+            const total = v.macro * VAGAS_CONFIG.medicas.length + v.nmed * VAGAS_CONFIG.naoMedicas.length;
+            const pct = Math.min(100, Math.round((used / Math.max(1, v.macro * 3)) * 100));
+            const isSel = selCity?.n === c.n;
+            return (
+              <div key={c.n} onClick={() => setSelCity(isSel ? null : c)}
+                style={{ ...S.card, cursor: "pointer", borderLeft: "3px solid " + (isSel ? C.azulPetroleo : getCityColor(c.n)), background: isSel ? C.azulPetroleo + "08" : "#fff", border: isSel ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{c.n}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>{c.e} · {(c.p/1000).toFixed(0)}k hab</div>
+                  </div>
+                  <span style={{ fontSize: 12, background: used > 0 ? C.azulPetroleo + "15" : "#f7f7f5", color: used > 0 ? C.azulPetroleo : "#aaa", borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>
+                    {used} membros
+                  </span>
+                </div>
+                <div style={{ width: "100%", height: 5, background: "#f0f0f0", borderRadius: 99 }}>
+                  <div style={{ height: "100%", background: pct >= 80 ? "#10B981" : pct >= 40 ? C.azulClaro : C.azulPetroleo, borderRadius: 99, width: pct + "%" }} />
+                </div>
+                <div style={{ fontSize: 10, color: "#aaa", marginTop: 4 }}>{pct}% preenchido</div>
+              </div>
+            );
+          })}
         </div>
 
+        {/* City detail */}
         {selCity && (() => {
           const v = calcVagas(selCity.p);
-          const normC = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s*[\/\-,]\s*[a-z]{2}$/i,"").trim();
-          const cityMembers = members.filter(m => normC(m.city) === normC(selCity.n));
-          const normSpec = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
-          const getMacroUsed = (esp) => cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp) && !m.subspecialty).length;
-          const getSubUsed = (esp) => cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp) && m.subspecialty).length;
-          const getNmedUsed = (esp) => cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp)).length;
+          const cityMembers = members.filter(m => normCity2(m.city) === normCity2(selCity.n));
+          const getMacroUsed = esp => cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp) && !m.subspecialty).length;
+          const getSubUsed = esp => cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp) && m.subspecialty).length;
+          const getNmedUsed = esp => cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp)).length;
 
           return (
             <div>
-              <div style={{ background: `linear-gradient(135deg,${C.noite},${C.azulPetroleo})`, borderRadius: 12, padding: "16px 18px", color: "#fff", marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ background: "linear-gradient(135deg," + C.noite + "," + C.azulPetroleo + ")", borderRadius: 12, padding: "16px 18px", color: "#fff", marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontSize: 17, fontWeight: 800 }}>{selCity.n} — {selCity.e}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>{(selCity.p / 1000).toFixed(0)}k hab · {cityMembers.length} membro{cityMembers.length !== 1 ? "s" : ""} ativo{cityMembers.length !== 1 ? "s" : ""}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800 }}>{selCity.n} - {selCity.e}</div>
+                    <div style={{ fontSize: 12, opacity: 0.8 }}>{cityMembers.length} membros ativos</div>
                   </div>
-                  <button onClick={() => setSelCity(null)} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}>✕</button>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6, marginTop: 12 }}>
-                  {[{ l: "Macroesp.", v: v.macro, c: C.verdeMedio }, { l: "Subesp.", v: v.sub, c: "#a78bfa" }, { l: "Não-méd.", v: v.nmed, c: "#fbbf24" }].map(s => (
-                    <div key={s.l} style={{ background: "rgba(255,255,255,0.1)", borderRadius: 7, padding: "7px 10px" }}>
-                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.5)" }}>{s.l}</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: s.c }}>{s.v}</div>
-                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)" }}>por especialidade</div>
-                    </div>
-                  ))}
+                  <button onClick={() => setSelCity(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>✕ Fechar</button>
                 </div>
               </div>
 
-              {/* Especialidades médicas */}
-              <div style={{ ...S.card, marginBottom: 12, padding: "12px 14px" }}>
-                <h4 style={{ fontSize: 12, fontWeight: 700, margin: "0 0 10px" }}>Especialidades Médicas</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 220, overflowY: "auto" }}>
+              {/* Especialidades Médicas */}
+              <div style={{ ...S.card, marginBottom: 10 }}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.azulPetroleo }}>Especialidades Médicas</h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {VAGAS_CONFIG.medicas.map(esp => {
                     const macroUsed = getMacroUsed(esp);
                     const subUsed = getSubUsed(esp);
                     const totalUsed = macroUsed + subUsed;
-                    const livre = Math.max(0, v.macro - macroUsed);
-                    const subLivre = Math.max(0, v.sub - subUsed);
-                    const membersInEsp = cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp));
+                    const livre = Math.max(0, v.macro - totalUsed);
+                    const membersInEsp = cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp));
+                    const isFull = livre === 0 && totalUsed > 0;
                     return (
-                      <div key={esp} style={{ background: "#fafafa", borderRadius: 7, padding: "6px 10px", border: "1px solid #f0f0f0" }}>
+                      <div key={esp} style={{ background: isFull ? "#f0fdf4" : "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid " + (isFull ? "#a7f3d0" : "#f0f0f0") }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, flexWrap: "wrap", gap: 4 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
-                            {(livre > 0 || subLivre > 0) && (
-                              <button onClick={() => onNav && onNav("leads", { city: selCity.n, spec: esp })}
-                                style={{ fontSize: 10, background: C.azulPetroleo + "15", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "30", borderRadius: 99, padding: "2px 8px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>
-                                🔍 Ver Leads
-                              </button>
-                            )}
-                          </div>
-                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                            {livre === 0 && totalUsed > 0 && <span style={{ fontSize: 10, color: "#EF4444", fontWeight: 700 }}>CHEIO</span>}
-                            <span style={{ fontSize: 10, color: "#aaa" }}>{totalUsed}/{v.macro} geral · {subUsed}/{v.sub} sub</span>
-                          </div>
-                          </div>
-                        </div>
-                        <div style={{ height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: 4 }}>
-                          <div style={{ height: "100%", background: livre === 0 ? "#EF4444" : C.verdeMedio, borderRadius: 99, width: `${Math.min(100, (totalUsed / v.macro) * 100)}%` }} />
-                        </div>
-                        {membersInEsp.length > 0 && (
-                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                            {membersInEsp.map(m => (
-                              <span key={m.id} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 99, background: m.subspecialty ? "#fff0f0" : "#f0f0f0", color: m.subspecialty ? "#EF4444" : "#555", fontWeight: m.subspecialty ? 700 : 400 }}>
-                                {m.name.split(" ").slice(0, 2).join(" ")}{m.subspecialty ? ` (${m.subspecialty})` : ""}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Não médicas */}
-              <div style={{ ...S.card, padding: "12px 14px" }}>
-                <h4 style={{ fontSize: 12, fontWeight: 700, margin: "0 0 10px" }}>Profissões Não Médicas</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {VAGAS_CONFIG.naoMedicas.map(esp => {
-                    const used = getNmedUsed(esp);
-                    const livre = Math.max(0, v.nmed - used);
-                    const membersInEsp = cityMembers.filter(m => normSpec(m.specialty) === normSpec(esp));
-                    return (
-                      <div key={esp} style={{ background: "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid #f0f0f0" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
                             {livre > 0 && (
@@ -1932,15 +1894,15 @@ function Mapeamento({ onNav }) {
                               </button>
                             )}
                           </div>
-                          <span style={{ fontSize: 11, color: livre === 0 ? "#EF4444" : "#aaa", fontWeight: livre === 0 ? 700 : 400 }}>
-                            {used}/{v.nmed} {livre === 0 ? "✓ COMPLETO" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
+                          <span style={{ fontSize: 11, color: isFull ? "#0f6e56" : "#aaa", fontWeight: isFull ? 700 : 400 }}>
+                            {totalUsed}/{v.macro} {isFull ? "✓ Completo" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
                           </span>
                         </div>
                         <div style={{ width: "100%", height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: membersInEsp.length > 0 ? 6 : 0 }}>
-                          <div style={{ height: "100%", background: livre === 0 ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: Math.min(100, (used / v.nmed) * 100) + "%" }} />
+                          <div style={{ height: "100%", background: isFull ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: Math.min(100, (totalUsed / v.macro) * 100) + "%" }} />
                         </div>
                         {membersInEsp.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
                             {membersInEsp.map(m => (
                               <span key={m.id} style={{ fontSize: 10, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 99, padding: "2px 7px", color: "#555" }}>
                                 {m.name}
@@ -1952,17 +1914,62 @@ function Mapeamento({ onNav }) {
                     );
                   })}
                 </div>
-                <div style={{ marginTop: 10, background: "#f0faf4", borderRadius: 7, padding: "7px 10px", fontSize: 11, color: "#0f6e56", borderLeft: `3px solid ${C.verdeMedio}` }}>
-                  💡 Subespecialistas aparecem em <span style={{ color: "#EF4444", fontWeight: 700 }}>vermelho</span> — ocupam vaga de subespecialidade, liberando vaga geral.
+              </div>
+
+              {/* Especialidades Não Médicas */}
+              <div style={S.card}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.verdeMedio }}>Especialidades Não Médicas</h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {VAGAS_CONFIG.naoMedicas.map(esp => {
+                    const used = getNmedUsed(esp);
+                    const livre = Math.max(0, v.nmed - used);
+                    const membersInEsp = cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp));
+                    const isFull = livre === 0 && used > 0;
+                    return (
+                      <div key={esp} style={{ background: isFull ? "#f0fdf4" : "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid " + (isFull ? "#a7f3d0" : "#f0f0f0") }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, flexWrap: "wrap", gap: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
+                            {livre > 0 && (
+                              <button onClick={() => onNav && onNav("leads", { city: selCity.n, spec: esp })}
+                                style={{ fontSize: 10, background: C.verdeMedio + "20", color: C.verdeEscuro, border: "1px solid " + C.verdeMedio + "40", borderRadius: 99, padding: "2px 8px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                🔍 Ver Leads
+                              </button>
+                            )}
+                          </div>
+                          <span style={{ fontSize: 11, color: isFull ? "#0f6e56" : "#aaa", fontWeight: isFull ? 700 : 400 }}>
+                            {used}/{v.nmed} {isFull ? "✓ Completo" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
+                          </span>
+                        </div>
+                        <div style={{ width: "100%", height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: membersInEsp.length > 0 ? 6 : 0 }}>
+                          <div style={{ height: "100%", background: isFull ? "#10B981" : C.verdeMedio, borderRadius: 99, width: Math.min(100, (used / v.nmed) * 100) + "%" }} />
+                        </div>
+                        {membersInEsp.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                            {membersInEsp.map(m => (
+                              <span key={m.id} style={{ fontSize: 10, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 99, padding: "2px 7px", color: "#555" }}>
+                                {m.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           );
         })()}
       </div>
+      </div>
     </div>
+      </div>
+      </div>
+      </div>
   );
 }
+
 
 // ─── GERADOR DE LEADS IA ──────────────────────────────────────────────────────
 const SUBESP_G = { "Cardiologia": ["Eletrofisiologia", "Cardiologia intervencionista", "Insuficiência cardíaca", "Cardiologia esportiva"], "Dermatologia": ["Dermatoscopia", "Tricologia", "Dermato-oncologia"], "Endocrinologia": ["Diabetes mellitus", "Tireoide", "Obesidade e metabolismo"], "Gastroenterologia": ["Endoscopia digestiva", "Hepatologia", "Doenças inflamatórias"], "Ginecologia e Obstetrícia": ["Medicina fetal", "Endometriose", "Reprodução assistida", "Mastologia"], "Neurologia": ["AVC", "Epilepsia", "Demências", "Parkinson", "Cefaleias"], "Oncologia": ["Onco-hematologia", "Imunoterapia", "Oncologia mamária"], "Ortopedia": ["Joelho", "Coluna vertebral", "Quadril", "Trauma"], "Psiquiatria": ["Transtornos do humor", "Ansiedade e TOC", "Dependência química"], "Urologia": ["Uro-oncologia", "Andrologia", "Litíase"], "Oftalmologia": ["Retina", "Córnea", "Glaucoma"], "Cirurgia Geral": ["Laparoscopia", "Cirurgia bariátrica", "Colorretal"], "Nutrição": ["Nutrição esportiva", "Nutrição clínica", "TCA"], "Psicologia": ["TCC", "Neuropsicologia", "ABA e TEA"], "Fisioterapia": ["Ortopédica", "Neurológica", "Pélvica"], "Fonoaudiologia": ["Disfagia", "Voz", "Linguagem infantil"] };
