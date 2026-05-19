@@ -1751,65 +1751,100 @@ function MemberPipeline() {
 }
 
 
+
 // ─── MAPEAMENTO ───────────────────────────────────────────────────────────────
 const VAGAS_CONFIG = {
-  medicas: ["Cardiologia","Dermatologia","Endocrinologia","Gastroenterologia","Ginecologia e Obstetrícia","Neurologia","Oncologia","Ortopedia","Otorrinolaringologia","Pediatria","Pneumologia","Psiquiatria","Reumatologia","Urologia","Oftalmologia","Cirurgia Geral","Cirurgia Plástica","Infectologia","Nefrologia","Hematologia"],
-  naoMedicas: ["Nutrição","Psicologia","Fisioterapia","Fonoaudiologia","Odontologia","Enfermagem"],
+  medicas: ["Cardiologia","Dermatologia","Endocrinologia","Gastroenterologia","Ginecologia","Neurologia","Oncologia","Ortopedia","Otorrinolaringologia","Pediatria","Pneumologia","Psiquiatria","Reumatologia","Urologia","Oftalmologia","Cirurgia Geral","Cirurgia Plastica","Infectologia","Nefrologia","Hematologia"],
+  naoMedicas: ["Nutricao","Psicologia","Fisioterapia","Fonoaudiologia","Odontologia","Enfermagem"],
 };
 
 const CIDADES_MAP = [
-  { n: "Ribeirão Preto", e: "SP", p: 720000 },
-  { n: "Uberlândia", e: "MG", p: 706000 },
-  { n: "São José do Rio Preto", e: "SP", p: 460000 },
+  { n: "Ribeirao Preto", e: "SP", p: 720000 },
+  { n: "Uberlandia", e: "MG", p: 706000 },
+  { n: "Sao Jose do Rio Preto", e: "SP", p: 460000 },
   { n: "Bauru", e: "SP", p: 380000 },
   { n: "Uberaba", e: "MG", p: 340000 },
   { n: "Presidente Prudente", e: "SP", p: 230000 },
   { n: "Campinas", e: "SP", p: 1200000 },
-  { n: "São Paulo", e: "SP", p: 12000000 },
+  { n: "Sao Paulo", e: "SP", p: 12000000 },
   { n: "Belo Horizonte", e: "MG", p: 2500000 },
   { n: "Curitiba", e: "PR", p: 1900000 },
   { n: "Porto Alegre", e: "RS", p: 1400000 },
-  { n: "Goiânia", e: "GO", p: 1500000 },
-  { n: "Manaus", e: "AM", p: 2200000 },
+  { n: "Goiania", e: "GO", p: 1500000 },
+  { n: "Florianopolis", e: "SC", p: 520000 },
+  { n: "Brasilia", e: "DF", p: 3000000 },
+  { n: "Franca", e: "SP", p: 350000 },
+  { n: "Marilia", e: "SP", p: 230000 },
   { n: "Fortaleza", e: "CE", p: 2700000 },
   { n: "Recife", e: "PE", p: 1600000 },
   { n: "Salvador", e: "BA", p: 2900000 },
-  { n: "Florianópolis", e: "SC", p: 520000 },
-  { n: "Brasília", e: "DF", p: 3000000 },
-  { n: "Franca", e: "SP", p: 350000 },
-  { n: "Marília", e: "SP", p: 230000 },
+  { n: "Manaus", e: "AM", p: 2200000 },
 ];
 
-function calcVagas(p) {
-  const f = Math.pow(p / 700000, 0.6);
-  return {
-    macro: Math.max(2, Math.round(6 * f)),
-    sub: Math.max(1, Math.round(3 * f)),
-    nmed: Math.max(2, Math.round(8 * f)),
-  };
+function calcVagas2(p) {
+  var f = Math.pow(p / 700000, 0.6);
+  return { macro: Math.max(2, Math.round(6 * f)), nmed: Math.max(2, Math.round(8 * f)) };
 }
 
-const normCity2 = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s*[\/\-,]\s*[a-z]{2}$/i,"").trim();
-const normSpec2 = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+function normCM(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s*[\/\-,]\s*[a-z]{2}$/i, "").trim(); }
+function normSM(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim(); }
 
 function Mapeamento({ onNav }) {
-  const [selCity, setSelCity] = useState(null);
-  const [search, setSearch] = useState("");
-  const members = DB.get("members", []).filter(m => m.status === "active");
+  var [selCity, setSelCity] = useState(null);
+  var [search, setSearch] = useState("");
+  var members = DB.get("members", []).filter(function(m) { return m.status === "active"; });
 
-  const filtered = search
-    ? CIDADES_MAP.filter(c => normCity2(c.n).includes(normCity2(search)))
-    : CIDADES_MAP;
+  var filtered = search ? CIDADES_MAP.filter(function(c) { return normCM(c.n).includes(normCM(search)); }) : CIDADES_MAP;
 
-  const getCityMemberCount = (cityName) =>
-    members.filter(m => normCity2(m.city) === normCity2(cityName)).length;
+  function getCityCount(name) { return members.filter(function(m) { return normCM(m.city) === normCM(name); }).length; }
+
+  var cityMems = selCity ? members.filter(function(m) { return normCM(m.city) === normCM(selCity.n); }) : [];
+  var vg = selCity ? calcVagas2(selCity.p) : null;
+
+  function getMUsed(esp) { return cityMems.filter(function(m) { return normSM(m.specialty) === normSM(esp); }).length; }
+
+  function renderRow(esp, used, total, onVer) {
+    var livre = Math.max(0, total - used);
+    var isFull = livre === 0 && used > 0;
+    var pct = Math.min(100, total > 0 ? (used / total) * 100 : 0);
+    var rowMems = cityMems.filter(function(m) { return normSM(m.specialty) === normSM(esp); });
+    return (
+      <div key={esp} style={{ background: isFull ? "#f0fdf4" : "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid " + (isFull ? "#a7f3d0" : "#f0f0f0"), marginBottom: 5 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
+            {livre > 0 && (
+              <button onClick={onVer} style={{ fontSize: 10, background: C.azulPetroleo + "20", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "40", borderRadius: 99, padding: "2px 8px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>
+                Ver Leads
+              </button>
+            )}
+          </div>
+          <span style={{ fontSize: 11, color: isFull ? "#0f6e56" : "#888", fontWeight: isFull ? 700 : 400 }}>
+            {used}/{total} {isFull ? "Completo" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
+          </span>
+        </div>
+        <div style={{ width: "100%", height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: rowMems.length > 0 ? 5 : 0 }}>
+          <div style={{ height: "100%", background: isFull ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: pct + "%" }} />
+        </div>
+        {rowMems.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+            {rowMems.map(function(m) { return (
+              <span key={m.id} style={{ fontSize: 10, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 99, padding: "2px 7px", color: "#555" }}>
+                {m.name}
+              </span>
+            ); })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
       <div style={S.topbar}>
         <div>
           <h1 style={S.sectionTitle}>Mapeamento de Vagas</h1>
-          <p style={S.sectionSub}>Vagas por cidade e especialidade · baseado em membros ativos</p>
+          <p style={S.sectionSub}>Vagas por cidade baseado em membros ativos</p>
         </div>
       </div>
 
@@ -1817,33 +1852,30 @@ function Mapeamento({ onNav }) {
         <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#aaa" }}>{I.search}</span>
         <input style={{ ...S.input, paddingLeft: 28, height: 34, fontSize: 13 }}
           placeholder="Buscar cidade..." value={search}
-          onChange={e => setSearch(e.target.value)} />
+          onChange={function(e) { setSearch(e.target.value); }} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr 1.6fr" : "repeat(auto-fill,minmax(220px,1fr))", gap: 14, alignItems: "start" }}>
-        
-        {/* City grid */}
         <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr" : "repeat(auto-fill,minmax(220px,1fr))", gap: 10 }}>
-          {filtered.map(c => {
-            const v = calcVagas(c.p);
-            const used = getCityMemberCount(c.n);
-            const total = v.macro * VAGAS_CONFIG.medicas.length + v.nmed * VAGAS_CONFIG.naoMedicas.length;
-            const pct = Math.min(100, Math.round((used / Math.max(1, v.macro * 3)) * 100));
-            const isSel = selCity?.n === c.n;
+          {filtered.map(function(c) {
+            var used = getCityCount(c.n);
+            var cv = calcVagas2(c.p);
+            var pct = Math.min(100, Math.round((used / Math.max(1, cv.macro * 2)) * 100));
+            var isSel = selCity && selCity.n === c.n;
             return (
-              <div key={c.n} onClick={() => setSelCity(isSel ? null : c)}
-                style={{ ...S.card, cursor: "pointer", borderLeft: "3px solid " + (isSel ? C.azulPetroleo : getCityColor(c.n)), background: isSel ? C.azulPetroleo + "08" : "#fff", border: isSel ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5" }}>
+              <div key={c.n} onClick={function() { setSelCity(isSel ? null : c); }}
+                style={{ ...S.card, cursor: "pointer", border: isSel ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5", background: isSel ? C.azulPetroleo + "08" : "#fff" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{c.n}</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>{c.e} · {(c.p/1000).toFixed(0)}k hab</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>{c.e} - {Math.round(c.p / 1000)}k hab</div>
                   </div>
                   <span style={{ fontSize: 12, background: used > 0 ? C.azulPetroleo + "15" : "#f7f7f5", color: used > 0 ? C.azulPetroleo : "#aaa", borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>
                     {used} membros
                   </span>
                 </div>
                 <div style={{ width: "100%", height: 5, background: "#f0f0f0", borderRadius: 99 }}>
-                  <div style={{ height: "100%", background: pct >= 80 ? "#10B981" : pct >= 40 ? C.azulClaro : C.azulPetroleo, borderRadius: 99, width: pct + "%" }} />
+                  <div style={{ height: "100%", background: pct >= 80 ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: pct + "%" }} />
                 </div>
                 <div style={{ fontSize: 10, color: "#aaa", marginTop: 4 }}>{pct}% preenchido</div>
               </div>
@@ -1851,122 +1883,39 @@ function Mapeamento({ onNav }) {
           })}
         </div>
 
-        {/* City detail */}
-        {selCity && (() => {
-          const v = calcVagas(selCity.p);
-          const cityMembers = members.filter(m => normCity2(m.city) === normCity2(selCity.n));
-          const getMacroUsed = esp => cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp) && !m.subspecialty).length;
-          const getSubUsed = esp => cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp) && m.subspecialty).length;
-          const getNmedUsed = esp => cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp)).length;
-
-          return (
-            <div>
-              <div style={{ background: "linear-gradient(135deg," + C.noite + "," + C.azulPetroleo + ")", borderRadius: 12, padding: "16px 18px", color: "#fff", marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: 800 }}>{selCity.n} - {selCity.e}</div>
-                    <div style={{ fontSize: 12, opacity: 0.8 }}>{cityMembers.length} membros ativos</div>
-                  </div>
-                  <button onClick={() => setSelCity(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>✕ Fechar</button>
+        {selCity && vg && (
+          <div>
+            <div style={{ background: "linear-gradient(135deg," + C.noite + "," + C.azulPetroleo + ")", borderRadius: 12, padding: "16px 18px", color: "#fff", marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>{selCity.n} - {selCity.e}</div>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>{cityMems.length} membros ativos</div>
                 </div>
-              </div>
-
-              {/* Especialidades Médicas */}
-              <div style={{ ...S.card, marginBottom: 10 }}>
-                <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.azulPetroleo }}>Especialidades Médicas</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {VAGAS_CONFIG.medicas.map(esp => {
-                    const macroUsed = getMacroUsed(esp);
-                    const subUsed = getSubUsed(esp);
-                    const totalUsed = macroUsed + subUsed;
-                    const livre = Math.max(0, v.macro - totalUsed);
-                    const membersInEsp = cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp));
-                    const isFull = livre === 0 && totalUsed > 0;
-                    return (
-                      <div key={esp} style={{ background: isFull ? "#f0fdf4" : "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid " + (isFull ? "#a7f3d0" : "#f0f0f0") }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, flexWrap: "wrap", gap: 4 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
-                            {livre > 0 && (
-                              <button onClick={() => onNav && onNav("leads", { city: selCity.n, spec: esp })}
-                                style={{ fontSize: 10, background: C.azulPetroleo + "15", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "30", borderRadius: 99, padding: "2px 8px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>
-                                🔍 Ver Leads
-                              </button>
-                            )}
-                          </div>
-                          <span style={{ fontSize: 11, color: isFull ? "#0f6e56" : "#aaa", fontWeight: isFull ? 700 : 400 }}>
-                            {totalUsed}/{v.macro} {isFull ? "✓ Completo" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
-                          </span>
-                        </div>
-                        <div style={{ width: "100%", height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: membersInEsp.length > 0 ? 6 : 0 }}>
-                          <div style={{ height: "100%", background: isFull ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: Math.min(100, (totalUsed / v.macro) * 100) + "%" }} />
-                        </div>
-                        {membersInEsp.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-                            {membersInEsp.map(m => (
-                              <span key={m.id} style={{ fontSize: 10, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 99, padding: "2px 7px", color: "#555" }}>
-                                {m.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Especialidades Não Médicas */}
-              <div style={S.card}>
-                <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.verdeMedio }}>Especialidades Não Médicas</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {VAGAS_CONFIG.naoMedicas.map(esp => {
-                    const used = getNmedUsed(esp);
-                    const livre = Math.max(0, v.nmed - used);
-                    const membersInEsp = cityMembers.filter(m => normSpec2(m.specialty) === normSpec2(esp));
-                    const isFull = livre === 0 && used > 0;
-                    return (
-                      <div key={esp} style={{ background: isFull ? "#f0fdf4" : "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid " + (isFull ? "#a7f3d0" : "#f0f0f0") }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, flexWrap: "wrap", gap: 4 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
-                            {livre > 0 && (
-                              <button onClick={() => onNav && onNav("leads", { city: selCity.n, spec: esp })}
-                                style={{ fontSize: 10, background: C.verdeMedio + "20", color: C.verdeEscuro, border: "1px solid " + C.verdeMedio + "40", borderRadius: 99, padding: "2px 8px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>
-                                🔍 Ver Leads
-                              </button>
-                            )}
-                          </div>
-                          <span style={{ fontSize: 11, color: isFull ? "#0f6e56" : "#aaa", fontWeight: isFull ? 700 : 400 }}>
-                            {used}/{v.nmed} {isFull ? "✓ Completo" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
-                          </span>
-                        </div>
-                        <div style={{ width: "100%", height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: membersInEsp.length > 0 ? 6 : 0 }}>
-                          <div style={{ height: "100%", background: isFull ? "#10B981" : C.verdeMedio, borderRadius: 99, width: Math.min(100, (used / v.nmed) * 100) + "%" }} />
-                        </div>
-                        {membersInEsp.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-                            {membersInEsp.map(m => (
-                              <span key={m.id} style={{ fontSize: 10, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 99, padding: "2px 7px", color: "#555" }}>
-                                {m.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                <button onClick={function() { setSelCity(null); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>
+                  Fechar
+                </button>
               </div>
             </div>
-          );
-        })()}
-      </div>
+
+            <div style={{ ...S.card, marginBottom: 10 }}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.azulPetroleo }}>Especialidades Medicas</h4>
+              {VAGAS_CONFIG.medicas.map(function(esp) {
+                var used = getMUsed(esp);
+                return renderRow(esp, used, vg.macro, function() { onNav && onNav("leads", { city: selCity.n, spec: esp }); });
+              })}
+            </div>
+
+            <div style={S.card}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.verdeMedio }}>Especialidades Nao Medicas</h4>
+              {VAGAS_CONFIG.naoMedicas.map(function(esp) {
+                var used = getMUsed(esp);
+                return renderRow(esp, used, vg.nmed, function() { onNav && onNav("leads", { city: selCity.n, spec: esp }); });
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
-      </div>
-      </div>
-      </div>
   );
 }
 
