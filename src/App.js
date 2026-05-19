@@ -4666,13 +4666,15 @@ function LoginScreen({ onLogin }) {
 }
 
 function App() {
-  const [user, setUser] = useState(() => {
-    try { const s = sessionStorage.getItem("partic_user"); return s ? JSON.parse(s) : null; } catch { return null; }
-  });
+  const [user, setUser] = useState(null);
   const [page, setPage] = useState("dashboard");
   const [navParams, setNavParams] = useState({});
 
-  useEffect(() => { initData(); }, []);
+  useEffect(() => { 
+    initData();
+    // Clear any stale session on app load
+    try { sessionStorage.removeItem("partic_user"); } catch {}
+  }, []);
 
   function handleLogin(u) {
     try { sessionStorage.setItem("partic_user", JSON.stringify(u)); } catch {}
