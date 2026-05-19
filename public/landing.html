@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARTIC Flow, CRM para Redes de Saúde de Excelência</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --noite: #0D2233;
+  --azul: #1B6B8A;
+  --azul-claro: #5BB8D4;
+  --verde: #1A7A5E;
+  --verde-medio: #4CAF82;
+  --roxo: #7153A2;
+  --branco: #ffffff;
+  --cinza: #f5f9fc;
+  --texto: #1a2e3b;
+  --texto2: #4a6070;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  color: var(--texto);
+  background: var(--branco);
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(27,107,138,0.1);
+  transition: box-shadow 0.3s;
+}
+header.scrolled { box-shadow: 0 4px 24px rgba(13,34,51,0.12); }
+
+.header-inner {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem; height: 68px;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+}
+.logo-mark {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--azul), var(--azul-claro));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800; font-size: 16px; color: white;
+}
+.logo-text { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 18px; color: var(--noite); }
+.logo-text span { color: var(--azul); }
+
+nav { display: flex; gap: 2rem; }
+nav a { text-decoration: none; color: var(--texto2); font-size: 14px; font-weight: 500; transition: color 0.2s; }
+nav a:hover { color: var(--azul); }
+
+.header-btns { display: flex; gap: 10px; align-items: center; }
+.btn-ghost { background: none; border: 1.5px solid var(--azul); color: var(--azul); padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-ghost:hover { background: var(--azul); color: white; }
+.btn-solid { background: var(--azul); color: white; border: none; padding: 9px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-solid:hover { background: var(--noite); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(27,107,138,0.35); }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  background: linear-gradient(160deg, var(--noite) 0%, #0e3349 55%, #0a4a5c 100%);
+  display: flex; align-items: center;
+  padding: 100px 2rem 80px;
+  position: relative; overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute; top: -200px; right: -200px;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(91,184,212,0.15) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.hero::after {
+  content: '';
+  position: absolute; bottom: -300px; left: -100px;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(26,122,94,0.12) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.hero-inner {
+  max-width: 1200px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 4rem; align-items: center;
+  position: relative; z-index: 1;
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(91,184,212,0.15); border: 1px solid rgba(91,184,212,0.3);
+  color: var(--azul-claro); border-radius: 99px;
+  padding: 6px 14px; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.5px; margin-bottom: 1.5rem;
+}
+.hero-badge::before { content: '⚡'; }
+
+.hero h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 3.4rem; line-height: 1.15;
+  font-weight: 800; color: white;
+  margin-bottom: 1.5rem;
+  letter-spacing: -1px;
+}
+.hero h1 em { font-style: normal; color: var(--azul-claro); }
+
+.hero p {
+  font-size: 1.1rem; line-height: 1.7;
+  color: rgba(255,255,255,0.72);
+  margin-bottom: 2.5rem; max-width: 480px;
+}
+
+.hero-btns { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn-hero-primary {
+  background: linear-gradient(135deg, var(--azul-claro), var(--verde-medio));
+  color: white; border: none;
+  padding: 14px 28px; border-radius: 10px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 8px 32px rgba(91,184,212,0.3);
+}
+.btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(91,184,212,0.45); }
+.btn-hero-secondary {
+  background: rgba(255,255,255,0.08); color: white;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  padding: 14px 28px; border-radius: 10px;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: all 0.3s;
+}
+.btn-hero-secondary:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.5); }
+
+.hero-stats {
+  display: flex; gap: 2rem; margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.stat { text-align: center; }
+.stat-num { font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 800; color: var(--azul-claro); }
+.stat-label { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+
+/* Hero visual - dashboard mockup */
+.hero-visual {
+  position: relative;
+}
+.mockup-wrapper {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(91,184,212,0.2);
+  border-radius: 20px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+}
+.mockup-bar {
+  display: flex; gap: 6px; margin-bottom: 16px;
+}
+.mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+.mockup-dot:nth-child(1) { background: #ff5f57; }
+.mockup-dot:nth-child(2) { background: #febc2e; }
+.mockup-dot:nth-child(3) { background: #28c840; }
+
+.mockup-content {
+  display: grid; grid-template-columns: 140px 1fr; gap: 12px; height: 340px;
+}
+.mockup-sidebar {
+  background: rgba(13,34,51,0.8); border-radius: 12px; padding: 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.mockup-nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px;
+  font-size: 11px; color: rgba(255,255,255,0.5);
+  cursor: default;
+}
+.mockup-nav-item.active {
+  background: rgba(91,184,212,0.2); color: var(--azul-claro);
+}
+.mockup-nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+.mockup-main {
+  background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.mockup-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.mockup-card {
+  background: rgba(255,255,255,0.08); border-radius: 8px; padding: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.mockup-card-num { font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800; color: white; }
+.mockup-card-label { font-size: 9px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+.mockup-card-bar { height: 3px; border-radius: 99px; margin-top: 8px; }
+
+.mockup-pipeline { display: flex; gap: 6px; flex: 1; }
+.mockup-col {
+  flex: 1; background: rgba(255,255,255,0.05);
+  border-radius: 8px; padding: 8px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.mockup-col-title { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+.mockup-card-sm {
+  height: 32px; border-radius: 5px;
+  background: rgba(255,255,255,0.08);
+  border-left: 2px solid;
+}
+
+/* ── FEATURES ── */
+.section-label {
+  display: inline-block;
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  color: var(--azul); text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2.6rem; font-weight: 800;
+  color: var(--noite); line-height: 1.2;
+  margin-bottom: 1rem;
+}
+.section-sub {
+  font-size: 1.05rem; color: var(--texto2);
+  line-height: 1.7; max-width: 560px;
+}
+
+.features {
+  padding: 100px 2rem;
+  background: var(--branco);
+}
+.features-inner { max-width: 1200px; margin: 0 auto; }
+.features-header { text-align: center; margin-bottom: 4rem; }
+.features-header .section-sub { margin: 0 auto; }
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.feature-card {
+  background: white;
+  border: 1px solid rgba(27,107,138,0.1);
+  border-radius: 16px; padding: 2rem;
+  transition: all 0.3s;
+  position: relative; overflow: hidden;
+}
+.feature-card::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--azul), var(--azul-claro));
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 0.3s;
+}
+.feature-card:hover { transform: translateY(-6px); box-shadow: 0 16px 48px rgba(27,107,138,0.12); border-color: var(--azul-claro); }
+.feature-card:hover::after { transform: scaleX(1); }
+
+.feature-icon {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, rgba(27,107,138,0.1), rgba(91,184,212,0.1));
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 24px; margin-bottom: 1.2rem;
+  transition: all 0.3s;
+}
+.feature-card:hover .feature-icon { background: linear-gradient(135deg, var(--azul), var(--azul-claro)); }
+
+.feature-card h3 { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--noite); margin-bottom: 0.6rem; }
+.feature-card p { font-size: 0.9rem; color: var(--texto2); line-height: 1.65; }
+
+/* ── HOW IT WORKS ── */
+.how {
+  padding: 100px 2rem;
+  background: var(--cinza);
+}
+.how-inner { max-width: 1100px; margin: 0 auto; }
+.how-header { text-align: center; margin-bottom: 4rem; }
+
+.steps {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem;
+  position: relative;
+}
+.steps::before {
+  content: '';
+  position: absolute; top: 28px; left: 12.5%; right: 12.5%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--azul-claro), var(--verde-medio));
+}
+
+.step { text-align: center; position: relative; }
+.step-num {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--azul), var(--azul-claro));
+  color: white; font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1.2rem;
+  box-shadow: 0 8px 24px rgba(27,107,138,0.3);
+  position: relative; z-index: 1;
+}
+.step h3 { font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700; color: var(--noite); margin-bottom: 0.5rem; }
+.step p { font-size: 0.875rem; color: var(--texto2); line-height: 1.6; }
+
+/* ── PRICING ── */
+.pricing {
+  padding: 100px 2rem;
+  background: white;
+}
+.pricing-inner { max-width: 1100px; margin: 0 auto; }
+.pricing-header { text-align: center; margin-bottom: 4rem; }
+
+.pricing-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+}
+
+.price-card {
+  border: 1.5px solid rgba(27,107,138,0.12);
+  border-radius: 20px; padding: 2.5rem;
+  transition: all 0.3s; text-align: center;
+  position: relative;
+}
+.price-card.featured {
+  border-color: var(--azul);
+  background: linear-gradient(160deg, rgba(27,107,138,0.04), rgba(91,184,212,0.06));
+  transform: scale(1.04);
+  box-shadow: 0 20px 60px rgba(27,107,138,0.18);
+}
+.price-badge {
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(90deg, var(--azul), var(--azul-claro));
+  color: white; font-size: 11px; font-weight: 800; letter-spacing: 1px;
+  padding: 4px 16px; border-radius: 99px;
+}
+
+.price-card h3 { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--noite); margin-bottom: 0.5rem; }
+.price-card .sub { font-size: 13px; color: var(--texto2); margin-bottom: 1.5rem; }
+
+.price-value {
+  margin: 1.5rem 0;
+}
+.price-value .currency { font-size: 1.2rem; color: var(--texto2); font-weight: 600; vertical-align: top; margin-top: 6px; display: inline-block; }
+.price-value .amount { font-family: 'Outfit', sans-serif; font-size: 3rem; font-weight: 800; color: var(--noite); }
+.price-value .period { font-size: 13px; color: var(--texto2); }
+
+.price-features { list-style: none; text-align: left; margin: 1.5rem 0; }
+.price-features li {
+  padding: 0.6rem 0; border-bottom: 1px solid rgba(27,107,138,0.08);
+  font-size: 14px; color: var(--texto2);
+  display: flex; align-items: center; gap: 10px;
+}
+.price-features li::before { content: '✓'; color: var(--verde-medio); font-weight: 800; font-size: 16px; flex-shrink: 0; }
+.price-features li:last-child { border-bottom: none; }
+
+.btn-plan {
+  width: 100%; padding: 14px; border-radius: 10px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: all 0.3s; margin-top: 1rem;
+}
+.btn-plan-outline { background: none; border: 2px solid var(--azul); color: var(--azul); }
+.btn-plan-outline:hover { background: var(--azul); color: white; }
+.btn-plan-filled { background: linear-gradient(135deg, var(--azul), var(--azul-claro)); color: white; border: none; box-shadow: 0 8px 24px rgba(27,107,138,0.3); }
+.btn-plan-filled:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(27,107,138,0.4); }
+
+/* ── CTA BANNER ── */
+.cta-banner {
+  padding: 80px 2rem;
+  background: linear-gradient(135deg, var(--noite) 0%, var(--azul) 100%);
+  text-align: center; position: relative; overflow: hidden;
+}
+.cta-banner::before {
+  content: '';
+  position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 400px;
+  background: radial-gradient(ellipse, rgba(91,184,212,0.15) 0%, transparent 70%);
+}
+.cta-banner h2 {
+  font-family: 'Outfit', sans-serif; font-size: 2.8rem; font-weight: 800;
+  color: white; margin-bottom: 1rem; position: relative;
+}
+.cta-banner p { font-size: 1.1rem; color: rgba(255,255,255,0.7); margin-bottom: 2.5rem; position: relative; }
+.cta-banner .btn-hero-primary { font-size: 16px; padding: 16px 36px; }
+
+/* ── FOOTER ── */
+footer {
+  background: var(--noite);
+  padding: 64px 2rem 32px;
+}
+.footer-inner { max-width: 1200px; margin: 0 auto; }
+.footer-grid {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 3rem; margin-bottom: 3rem;
+}
+.footer-brand .logo-mark { width: 42px; height: 42px; font-size: 18px; }
+.footer-brand .logo-text { color: white; font-size: 20px; }
+.footer-brand p { font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 1rem; line-height: 1.7; max-width: 280px; }
+
+.footer-col h4 { font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.9); margin-bottom: 1rem; letter-spacing: 0.5px; }
+.footer-col a, .footer-col p { display: block; font-size: 14px; color: rgba(255,255,255,0.5); text-decoration: none; margin-bottom: 0.6rem; transition: color 0.2s; }
+.footer-col a:hover { color: var(--azul-claro); }
+
+.social-row { display: flex; gap: 10px; margin-top: 0.5rem; }
+.social-btn {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.6); text-decoration: none;
+  font-size: 16px; transition: all 0.2s;
+}
+.social-btn:hover { background: var(--azul); color: white; transform: translateY(-2px); }
+
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 2rem;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; color: rgba(255,255,255,0.35);
+}
+
+/* ── MODAL DIAGNÓSTICO ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(13,34,51,0.7); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+
+.modal-box {
+  background: white; border-radius: 20px;
+  padding: 2.5rem; width: 100%; max-width: 480px;
+  box-shadow: 0 40px 80px rgba(13,34,51,0.4);
+  animation: modalIn 0.3s ease;
+}
+@keyframes modalIn { from { opacity:0; transform: translateY(24px) scale(0.97); } to { opacity:1; transform: none; } }
+
+.modal-box h2 { font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--noite); margin-bottom: 0.4rem; }
+.modal-box p { font-size: 14px; color: var(--texto2); margin-bottom: 1.8rem; }
+.modal-close { float: right; background: none; border: none; font-size: 22px; color: #aaa; cursor: pointer; margin-top: -4px; }
+.modal-close:hover { color: var(--noite); }
+
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--noite); margin-bottom: 6px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid rgba(27,107,138,0.2); border-radius: 10px;
+  font-size: 14px; font-family: inherit;
+  transition: all 0.2s; outline: none; color: var(--texto);
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--azul);
+  box-shadow: 0 0 0 3px rgba(27,107,138,0.1);
+}
+.form-group textarea { resize: none; height: 80px; }
+
+.btn-submit {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--azul), var(--azul-claro));
+  color: white; border: none; border-radius: 10px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: all 0.3s; margin-top: 0.5rem;
+}
+.btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(27,107,138,0.4); }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.form-success { text-align: center; padding: 2rem 0; }
+.form-success .check { font-size: 48px; margin-bottom: 1rem; }
+.form-success h3 { font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--noite); margin-bottom: 0.5rem; }
+.form-success p { font-size: 14px; color: var(--texto2); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .hero-inner { grid-template-columns: 1fr; }
+  .hero-visual { display: none; }
+  .hero h1 { font-size: 2.4rem; }
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+  .steps { grid-template-columns: repeat(2, 1fr); }
+  .steps::before { display: none; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .price-card.featured { transform: none; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  nav { display: none; }
+}
+@media (max-width: 600px) {
+  .hero h1 { font-size: 2rem; }
+  .features-grid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr 1fr; }
+  .footer-grid { grid-template-columns: 1fr; }
+  .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
+  .section-title { font-size: 2rem; }
+}
+
+/* animate on scroll */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="header">
+  <div class="header-inner">
+    <a href="#" class="logo">
+      <div class="logo-mark">P</div>
+      <span class="logo-text">PARTIC <span>Flow</span></span>
+    </a>
+    <nav>
+      <a href="#features">Funcionalidades</a>
+      <a href="#how">Como funciona</a>
+      <a href="#pricing">Planos</a>
+      <a href="#contact">Contato</a>
+    </nav>
+    <div class="header-btns">
+      <button class="btn-ghost" onclick="window.location.href='./index.html#login'">Login</button>
+      <button class="btn-solid" onclick="openModal()">Diagnóstico Grátis</button>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-badge">CRM para Redes de Saúde de Excelência</div>
+      <h1>Organize, cresça e <em>fidelize</em> sua rede de saúde</h1>
+      <p>PARTIC Flow é o CRM completo criado para clínicas, consultórios e redes de profissionais de saúde. Pipeline comercial, mapeamento de vagas, gestão de membros e muito mais em um só lugar.</p>
+      <div class="hero-btns">
+        <button class="btn-hero-primary" onclick="openModal()">Diagnóstico Operacional Grátis</button>
+        <button class="btn-hero-secondary" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Ver planos</button>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><div class="stat-num">100+</div><div class="stat-label">Profissionais gerenciados</div></div>
+        <div class="stat"><div class="stat-num">5</div><div class="stat-label">Cidades atendidas</div></div>
+        <div class="stat"><div class="stat-num">100%</div><div class="stat-label">Dados protegidos</div></div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="mockup-wrapper">
+        <div class="mockup-bar">
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+        </div>
+        <div class="mockup-content">
+          <div class="mockup-sidebar">
+            <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.3);letter-spacing:1px;padding:4px 10px;margin-bottom:4px;">PARTIC</div>
+            <div class="mockup-nav-item active"><div class="mockup-nav-dot"></div>Dashboard</div>
+            <div class="mockup-nav-item"><div class="mockup-nav-dot"></div>Leads</div>
+            <div class="mockup-nav-item"><div class="mockup-nav-dot"></div>Curadoria</div>
+            <div class="mockup-nav-item"><div class="mockup-nav-dot"></div>Comercial</div>
+            <div class="mockup-nav-item"><div class="mockup-nav-dot"></div>Membros</div>
+            <div class="mockup-nav-item"><div class="mockup-nav-dot"></div>Mapeamento</div>
+            <div class="mockup-nav-item"><div class="mockup-nav-dot"></div>Calendário</div>
+          </div>
+          <div class="mockup-main">
+            <div class="mockup-cards">
+              <div class="mockup-card">
+                <div class="mockup-card-num" style="color:#5BB8D4">94</div>
+                <div class="mockup-card-label">Membros Ativos</div>
+                <div class="mockup-card-bar" style="background:linear-gradient(90deg,#5BB8D4,#4CAF82);width:85%"></div>
+              </div>
+              <div class="mockup-card">
+                <div class="mockup-card-num" style="color:#F59E0B">12</div>
+                <div class="mockup-card-label">Em Curadoria</div>
+                <div class="mockup-card-bar" style="background:#F59E0B;width:45%"></div>
+              </div>
+              <div class="mockup-card">
+                <div class="mockup-card-num" style="color:#7153A2">8</div>
+                <div class="mockup-card-label">Comercial</div>
+                <div class="mockup-card-bar" style="background:#7153A2;width:30%"></div>
+              </div>
+            </div>
+            <div class="mockup-pipeline">
+              <div class="mockup-col">
+                <div class="mockup-col-title">PROSPECTO</div>
+                <div class="mockup-card-sm" style="border-color:#3B82F6"></div>
+                <div class="mockup-card-sm" style="border-color:#3B82F6"></div>
+                <div class="mockup-card-sm" style="border-color:#3B82F6"></div>
+              </div>
+              <div class="mockup-col">
+                <div class="mockup-col-title">REUNIÃO</div>
+                <div class="mockup-card-sm" style="border-color:#F97316"></div>
+                <div class="mockup-card-sm" style="border-color:#F97316"></div>
+              </div>
+              <div class="mockup-col">
+                <div class="mockup-col-title">NEGOCIAÇÃO</div>
+                <div class="mockup-card-sm" style="border-color:#EF4444"></div>
+              </div>
+              <div class="mockup-col">
+                <div class="mockup-col-title">FECHOU!</div>
+                <div class="mockup-card-sm" style="border-color:#10B981"></div>
+                <div class="mockup-card-sm" style="border-color:#10B981"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="features-inner">
+    <div class="features-header reveal">
+      <div class="section-label">Funcionalidades</div>
+      <h2 class="section-title">Tudo que sua rede precisa<br>em um único sistema</h2>
+      <p class="section-sub">Do primeiro contato até a fidelização do membro cada etapa da sua operação comercial organizada e automatizada.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <div class="feature-icon">📊</div>
+        <h3>Pipeline Comercial Visual</h3>
+        <p>Acompanhe cada profissional desde o primeiro contato até o fechamento. Kanban intuitivo com etapas personalizadas e agendamento de reuniões integrado.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">🗺️</div>
+        <h3>Mapeamento de Vagas</h3>
+        <p>Veja em tempo real quantas vagas existem por cidade e especialidade com base nos seus membros ativos. Identifique oportunidades e encontre leads qualificados.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">👥</div>
+        <h3>Gestão de Membros</h3>
+        <p>Base completa de membros com 16 campos, contato direto via WhatsApp, exportação CSV e filtros por cidade e especialidade.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">🔍</div>
+        <h3>Curadoria Completo</h3>
+        <p>Processo estruturado de avaliação e aprovação de profissionais antes de entrar no pipeline comercial. Mantenha a qualidade da sua rede.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">📅</div>
+        <h3>Calendário Integrado</h3>
+        <p>Todas as reuniões do pipeline comercial aparecem automaticamente no calendário. Alertas diários de compromissos no menu lateral.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">⚓</div>
+        <h3>Membros Âncora</h3>
+        <p>Destaque os profissionais de referência da sua rede. Visibilidade especial para os âncoras de cada cidade e especialidade.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="how-inner">
+    <div class="how-header reveal">
+      <div class="section-label">Como funciona</div>
+      <h2 class="section-title">Do lead ao membro em 4 etapas</h2>
+      <p class="section-sub" style="margin:0 auto">Um fluxo claro e estruturado para crescer sua rede com qualidade e controle.</p>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num">1</div>
+        <h3>Importação</h3>
+        <p>Importe sua base de contatos via CSV ou adicione manualmente. Mapeamento automático de campos.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">2</div>
+        <h3>Curadoria</h3>
+        <p>Avalie e aprove profissionais antes de iniciar o processo comercial. Mantenha padrão de qualidade.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">3</div>
+        <h3>Comercial</h3>
+        <p>Pipeline visual com agendamento de reuniões, registro de negociações e acompanhamento em tempo real.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">4</div>
+        <h3>Membro Ativo</h3>
+        <p>Profissional integrado à rede PARTIC com todos os dados organizados e comunicação direta.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="pricing-inner">
+    <div class="pricing-header reveal">
+      <div class="section-label">Planos</div>
+      <h2 class="section-title">Simples, transparente<br>e sem surpresas</h2>
+      <p class="section-sub" style="margin:0 auto">Escolha o plano ideal para o tamanho da sua rede. Sem taxas ocultas.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card reveal">
+        <h3>Essencial</h3>
+        <p class="sub">Até 3 profissionais</p>
+        <div class="price-value">
+          <span class="currency">R$</span>
+          <span class="amount">69</span>
+          <span class="currency">,90</span>
+          <div class="period">/mês</div>
+        </div>
+        <ul class="price-features">
+          <li>Até 3 usuários</li>
+          <li>Pipeline comercial</li>
+          <li>Gestão de leads</li>
+          <li>Curadoria</li>
+          <li>Calendário integrado</li>
+          <li>Suporte por email</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="openModal()">Começar diagnóstico</button>
+      </div>
+      <div class="price-card featured reveal">
+        <div class="price-badge">⭐ MAIS POPULAR</div>
+        <h3>Profissional</h3>
+        <p class="sub">Até 7 profissionais</p>
+        <div class="price-value">
+          <span class="currency">R$</span>
+          <span class="amount">149</span>
+          <span class="currency">,90</span>
+          <div class="period">/mês</div>
+        </div>
+        <ul class="price-features">
+          <li>Até 7 usuários</li>
+          <li>Tudo do Essencial</li>
+          <li>Mapeamento de vagas</li>
+          <li>Membros âncora</li>
+          <li>Importação em massa</li>
+          <li>Suporte prioritário</li>
+        </ul>
+        <button class="btn-plan btn-plan-filled" onclick="openModal()">Começar diagnóstico</button>
+      </div>
+      <div class="price-card reveal">
+        <h3>Enterprise</h3>
+        <p class="sub">Acima de 7 profissionais</p>
+        <div class="price-value">
+          <span class="currency">R$</span>
+          <span class="amount">249</span>
+          <span class="currency">,90</span>
+          <div class="period">/mês</div>
+        </div>
+        <ul class="price-features">
+          <li>Usuários ilimitados</li>
+          <li>Tudo do Profissional</li>
+          <li>Studio PARTIC</li>
+          <li>Central Operacional</li>
+          <li>Onboarding dedicado</li>
+          <li>Suporte 24/7</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="openModal()">Começar diagnóstico</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section class="cta-banner" id="contact">
+  <h2 class="reveal">Pronto para transformar<br>sua rede de saúde?</h2>
+  <p class="reveal">Faça um diagnóstico operacional gratuito e descubra como o PARTIC Flow pode otimizar sua operação.</p>
+  <button class="btn-hero-primary reveal" onclick="openModal()">Solicitar Diagnóstico Gratuito</button>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="margin-bottom:1rem">
+          <div class="logo-mark">P</div>
+          <span class="logo-text">PARTIC <span style="color:var(--azul-claro)">Flow</span></span>
+        </div>
+        <p>CRM completo para redes de profissionais de saúde de excelência. Organize, cresça e fidelize sua rede.</p>
+        <div class="social-row" style="margin-top:1.2rem">
+          <a href="https://www.instagram.com/partic_saude/" target="_blank" class="social-btn" title="Instagram">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+          </a>
+          <a href="https://www.linkedin.com/company/particapp/" target="_blank" class="social-btn" title="LinkedIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          </a>
+          <a href="https://partic.com.br" target="_blank" class="social-btn" title="Site PARTIC">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Sistema</h4>
+        <a href="#features">Funcionalidades</a>
+        <a href="#how">Como funciona</a>
+        <a href="#pricing">Planos</a>
+        <a href="#" onclick="openModal()">Diagnóstico</a>
+      </div>
+      <div class="footer-col">
+        <h4>Links</h4>
+        <a href="https://partic.com.br" target="_blank">partic.com.br</a>
+        <a href="https://www.instagram.com/partic_saude/" target="_blank">@partic_saude</a>
+        <a href="https://www.linkedin.com/company/particapp/" target="_blank">LinkedIn</a>
+      </div>
+      <div class="footer-col" id="contact-footer">
+        <h4>Contato</h4>
+        <p>partic.contato@gmail.com</p>
+        <a href="mailto:partic.contato@gmail.com">Enviar email</a>
+        <a href="#" onclick="openModal()" style="color:var(--azul-claro);font-weight:600;margin-top:0.5rem">Diagnóstico grátis →</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 PARTIC Flow. Todos os direitos reservados.</span>
+      <span>Saúde de Excelência a um clique</span>
+    </div>
+  </div>
+</footer>
+
+<!-- MODAL DIAGNÓSTICO -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div id="modal-form">
+      <h2>Diagnóstico Operacional</h2>
+      <p>Preencha o formulário e entraremos em contato em até 24h para apresentar o PARTIC Flow.</p>
+      <div class="form-group">
+        <label>Nome completo *</label>
+        <input type="text" id="f-nome" placeholder="Seu nome" required>
+      </div>
+      <div class="form-group">
+        <label>E-mail *</label>
+        <input type="email" id="f-email" placeholder="seu@email.com" required>
+      </div>
+      <div class="form-group">
+        <label>WhatsApp *</label>
+        <input type="tel" id="f-tel" placeholder="(XX) 9XXXX-XXXX" required>
+      </div>
+      <div class="form-group">
+        <label>Segmento</label>
+        <select id="f-seg">
+          <option value="">Selecione seu segmento</option>
+          <option>Clínica médica</option>
+          <option>Consultório particular</option>
+          <option>Rede de profissionais de saúde</option>
+          <option>Operadora de saúde</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Quantos profissionais na sua rede?</label>
+        <select id="f-qtd">
+          <option value="">Selecione</option>
+          <option>Até 3</option>
+          <option>4 a 7</option>
+          <option>8 a 20</option>
+          <option>Mais de 20</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Qual é sua principal dificuldade hoje?</label>
+        <textarea id="f-obs" placeholder="Ex: organizar leads, acompanhar comercial, mapear vagas..."></textarea>
+      </div>
+      <button class="btn-submit" id="btn-submit" onclick="submitForm()">Solicitar Diagnóstico Gratuito</button>
+    </div>
+    <div class="form-success" id="modal-success" style="display:none">
+      <div class="check">✅</div>
+      <h3>Recebemos sua solicitação!</h3>
+      <p>Em até 24h entraremos em contato pelo WhatsApp ou email informado para apresentar o PARTIC Flow.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// Sticky header
+window.addEventListener('scroll', () => {
+  document.getElementById('header').classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// Reveal on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Modal
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+// Form submit via mailto
+function submitForm() {
+  const nome = document.getElementById('f-nome').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const tel = document.getElementById('f-tel').value.trim();
+
+  if (!nome || !email || !tel) {
+    alert('Por favor preencha nome, email e WhatsApp.');
+    return;
+  }
+
+  const seg = document.getElementById('f-seg').value || 'Não informado';
+  const qtd = document.getElementById('f-qtd').value || 'Não informado';
+  const obs = document.getElementById('f-obs').value || 'Não informado';
+
+  const subject = encodeURIComponent('Diagnóstico PARTIC Flow, ' + nome);
+  const body = encodeURIComponent(
+    'Nome: ' + nome + '\n' +
+    'Email: ' + email + '\n' +
+    'WhatsApp: ' + tel + '\n' +
+    'Segmento: ' + seg + '\n' +
+    'Profissionais: ' + qtd + '\n' +
+    'Dificuldade: ' + obs
+  );
+
+  window.location.href = 'mailto:partic.contato@gmail.com?subject=' + subject + '&body=' + body;
+
+  document.getElementById('modal-form').style.display = 'none';
+  document.getElementById('modal-success').style.display = 'block';
+}
+</script>
+</body>
+</html>
