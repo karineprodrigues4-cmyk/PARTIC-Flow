@@ -1514,6 +1514,38 @@ function Members() {
 
 function Anchors() {
   const members = DB.get("members", []).filter(m => m.isAnchor);
+  // Dr. Leon Macedo always first (CEO/Âncora)
+  const leon = members.find(m => m.name && m.name.toLowerCase().includes("leon"));
+  const others = members.filter(m => !m.name || !m.name.toLowerCase().includes("leon"));
+  const sorted = leon ? [leon, ...others] : others;
+
+  const AnchorCard = ({ m, featured }) => (
+    <div style={{ ...S.card,
+      borderLeft: "3px solid " + getCityColor(m.city),
+      background: featured ? "linear-gradient(135deg," + C.noite + "08," + C.azulPetroleo + "08)" : "#fff",
+      border: featured ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5",
+      position: "relative",
+    }}>
+      {featured && (
+        <div style={{ position: "absolute", top: -10, left: 16, background: C.azulPetroleo, color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 99, padding: "2px 10px", letterSpacing: 1 }}>
+          ⚓ CEO PARTIC
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12, marginTop: featured ? 8 : 0 }}>
+        <Avatar name={m.name} size={featured ? 56 : 48} city={m.city} />
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: featured ? 16 : 14, fontWeight: 800, margin: "0 0 2px" }}>{m.name}</p>
+          <p style={{ fontSize: 12, color: "#666", margin: "0 0 3px" }}>{m.specialty}{m.subspecialty && <span style={{ color: "#EF4444" }}> · {m.subspecialty}</span>}</p>
+          <span style={{ fontSize: 11, background: getCityColor(m.city) + "20", color: getCityColor(m.city), borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>⚓ {m.city}{m.state ? " - " + m.state : ""}</span>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {m.personalContact && <WppBtn phone={m.personalContact} showNumber={true} />}
+        {m.email && <a href={"mailto:" + m.email} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
+      </div>
+    </div>
+  );
+
   return (
     <div>
       <div style={S.topbar}>
@@ -1522,32 +1554,1130 @@ function Anchors() {
           <p style={S.sectionSub}>{members.length} âncoras confirmados</p>
         </div>
       </div>
+
+      {leon && (
+        <div style={{ marginBottom: 20 }}>
+          <AnchorCard m={leon} featured={true} />
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
-        {members.map(m => (
-          <div key={m.id} style={{ ...S.card, borderLeft: `3px solid ${getCityColor(m.city)}` }}>
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
-              <Avatar name={m.name} size={48} city={m.city} />
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: 800, margin: "0 0 2px" }}>{m.name}</p>
-                <p style={{ fontSize: 12, color: "#666", margin: "0 0 3px" }}>{m.specialty}{m.subspecialty && <span style={{ color: "#EF4444" }}> · {m.subspecialty}</span>}</p>
-                <span style={{ fontSize: 11, background: getCityColor(m.city) + "20", color: getCityColor(m.city), borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>⚓ {m.city} - {m.state}</span>
+        {others.map(m => (
+          <AnchorCard key={m.id} m={m} featured={false} />
+        ))}
+        {others.length === 0 && !leon && (
+          <div style={{ gridColumn: "1/-1", ...S.card, textAlign: "center", padding: "48px 20px", color: "#aaa" }}>
+            <p style={{ fontSize: 32, margin: "0 0 10px" }}>⚓</p>
+            <p>Nenhum âncora cadastrado ainda. Marque membros como âncora na tela de Membros.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── PIPELINE MEMBROS ─────────────────────────────────────────────────────────
+function MemberPipeline() {
+  const [pipelines, setPipelines] = useState(DB.get("member_pipelines", []));
+  const [selPipeline, setSelPipeline] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [dragging, setDragging] = useState(null);
+  const save = d => { setPipelines(d); DB.set("member_pipelines", d); };
+
+  const allMembers = DB.get("members", []).filter(m => m.status === "active");
+
+  function createPipeline() {
+    if (!newName.trim()) return alert("Nome é obrigatório");
+    const np = { id: Date.now(), name: newName, createdAt: new Date().toISOString(), items: [] };
+    const updated = [...pipelines, np];
+    save(updated); setSelPipeline(np); setShowCreate(false); setNewName("");
+    showToast(`Funil "${newName}" criado ✓`);
+  }
+
+  function addMemberToPipeline(member) {
+    if (!selPipeline) return;
+    const already = selPipeline.items.find(i => i.memberId === member.id);
+    if (already) return showToast("Membro já está neste funil", "info");
+    const item = { id: Date.now(), memberId: member.id, name: member.name, specialty: member.specialty, city: member.city, phone: member.personalContact, email: member.email, stage: "a_fazer", addedAt: new Date().toISOString(), notes: "" };
+    const updated = pipelines.map(p => p.id === selPipeline.id ? { ...p, items: [...p.items, item] } : p);
+    save(updated); setSelPipeline(updated.find(p => p.id === selPipeline.id));
+    setShowAddMember(false); showToast(`${member.name} adicionado ao funil ✓`);
+  }
+
+  function moveItem(itemId, stage) {
+    const updated = pipelines.map(p => p.id === selPipeline.id ? { ...p, items: p.items.map(i => i.id === itemId ? { ...i, stage } : i) } : p);
+    save(updated); setSelPipeline(updated.find(p => p.id === selPipeline.id));
+  }
+
+  function deletePipeline(id) {
+    if (!confirm("Remover funil?")) return;
+    const updated = pipelines.filter(p => p.id !== id);
+    save(updated); if (selPipeline?.id === id) setSelPipeline(null);
+    showToast("Funil removido", "info");
+  }
+
+  if (!selPipeline) return (
+    <div>
+      <div style={S.topbar}>
+        <div>
+          <h1 style={S.sectionTitle}>Pipeline de Membros</h1>
+          <p style={S.sectionSub}>Funis de ações com membros ativos · {pipelines.length} funis criados</p>
+        </div>
+        <button style={S.btnP} onClick={() => setShowCreate(true)}>{I.plus} Criar funil</button>
+      </div>
+      {pipelines.length === 0 ? (
+        <div style={{ ...S.card, textAlign: "center", padding: "60px 20px" }}>
+          <p style={{ fontSize: 36, margin: "0 0 12px" }}>🎯</p>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: C.azulPetroleo, margin: "0 0 8px" }}>Crie seu primeiro funil</h3>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 20px" }}>Exemplos: Entrega de Display, Aniversários, Visitas, Kit de Boas-Vindas</p>
+          <button style={S.btnP} onClick={() => setShowCreate(true)}>{I.plus} Criar funil</button>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
+          {pipelines.map(p => {
+            const done = p.items.filter(i => i.stage === "concluido").length;
+            const pct = p.items.length > 0 ? Math.round((done / p.items.length) * 100) : 0;
+            return (
+              <div key={p.id} style={{ ...S.card, cursor: "pointer" }} onClick={() => setSelPipeline(p)}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 3px" }}>{p.name}</h3>
+                    <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{p.items.length} membros · criado {new Date(p.createdAt).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                  <button style={{ ...S.btnD, padding: "0 8px", height: 26 }} onClick={e => { e.stopPropagation(); deletePipeline(p.id); }}>{I.trash}</button>
+                </div>
+                <div style={{ marginBottom: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                    <span style={{ fontSize: 11, color: "#888" }}>Progresso</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: C.verdeMedio }}>{pct}%</span>
+                  </div>
+                  <div style={{ height: 5, background: "#f0f0f0", borderRadius: 99 }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: C.verdeMedio, borderRadius: 99 }} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {PIPELINE_STAGES.map(st => (
+                    <div key={st.id} style={{ flex: 1, background: st.color + "15", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: st.color }}>{p.items.filter(i => i.stage === st.id).length}</div>
+                      <div style={{ fontSize: 9, color: st.color }}>{st.label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {m.personalContact && (
-                <a href={`https://wa.me/55${m.personalContact.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>
-                  {I.wpp} {m.personalContact}
-                </a>
-              )}
-              {m.email && (
-                <a href={`mailto:${m.email}`} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>
-                  {I.mail} E-mail
-                </a>
-              )}
+            );
+          })}
+        </div>
+      )}
+      {showCreate && (
+        <div style={S.modal} onClick={() => setShowCreate(false)}>
+          <div style={{ ...S.modalBox, maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 8px" }}>Criar Funil</h3>
+            <p style={{ fontSize: 12, color: "#888", margin: "0 0 16px" }}>Exemplos: Entrega de Display, Kit Aniversário, Visita ao Consultório</p>
+            <label style={S.lbl}>Nome do funil *</label>
+            <input style={{ ...S.input, marginBottom: 14 }} value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Entrega Display PARTIC" autoFocus />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={S.btnP} onClick={createPipeline}>Criar funil</button>
+              <button style={S.btnO} onClick={() => setShowCreate(false)}>Cancelar</button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Vista do funil selecionado
+  const pItems = selPipeline.items || [];
+  const cols = PIPELINE_STAGES.reduce((acc, s) => { acc[s.id] = pItems.filter(i => i.stage === s.id); return acc; }, {});
+
+  return (
+    <div>
+      <div style={S.topbar}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button style={{ ...S.btnO, padding: "0 10px" }} onClick={() => setSelPipeline(null)}>← Voltar</button>
+          <div>
+            <h1 style={S.sectionTitle}>{selPipeline.name}</h1>
+            <p style={S.sectionSub}>{pItems.length} membros neste funil</p>
+          </div>
+        </div>
+        <button style={S.btnP} onClick={() => setShowAddMember(true)}>{I.plus} Adicionar membro</button>
+      </div>
+
+      <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
+        {PIPELINE_STAGES.map(stage => (
+          <div key={stage.id} style={{ ...S.kanbanCol, borderTop: `3px solid ${stage.color}` }}
+            onDragOver={e => e.preventDefault()}
+            onDrop={() => { if (dragging) { moveItem(dragging, stage.id); setDragging(null); } }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color }} />
+              <span style={{ fontWeight: 700, fontSize: 12 }}>{stage.label}</span>
+              <span style={{ marginLeft: "auto", background: stage.color + "20", color: stage.color, borderRadius: 99, padding: "1px 7px", fontSize: 11, fontWeight: 700 }}>{cols[stage.id].length}</span>
+            </div>
+            {cols[stage.id].map(item => (
+              <div key={item.id} style={S.kanbanCard} draggable onDragStart={() => setDragging(item.id)} onDragEnd={() => setDragging(null)}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                  <Avatar name={item.name} size={28} city={item.city} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, margin: "0 0 1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
+                    <p style={{ fontSize: 11, color: "#888", margin: 0 }}>{item.specialty} · {item.city}</p>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 5 }}>
+                  {item.phone && <a href={`https://wa.me/55${item.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp}</a>}
+                  {item.email && <a href={`mailto:${item.email}`} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail}</a>}
+                </div>
+                <div style={{ display: "flex", gap: 4, marginTop: 7 }}>
+                  {PIPELINE_STAGES.filter(s => s.id !== stage.id).map(s => (
+                    <button key={s.id} onClick={() => moveItem(item.id, s.id)}
+                      style={{ flex: 1, background: s.color + "15", color: s.color, border: `1px solid ${s.color}30`, borderRadius: 5, padding: "3px 0", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
+                      → {s.label.replace(" ✓", "")}
+                    </button>
+                  ))}
+                  <button onClick={() => { if (confirm("Remover do funil?")) { const upd = pipelines.map(p => p.id === selPipeline.id ? { ...p, items: p.items.filter(i => i.id !== item.id) } : p); save(upd); setSelPipeline(upd.find(p => p.id === selPipeline.id)); } }}
+                    style={{ background: "#fff0f0", color: "#a32d2d", border: "1px solid #fca5a5", borderRadius: 5, padding: "3px 5px", fontSize: 10, cursor: "pointer" }}>{I.trash}</button>
+                </div>
+              </div>
+            ))}
+          </div>
         ))}
-        {members.length === 0 && (
+      </div>
+
+      {showAddMember && (
+        <div style={S.modal} onClick={() => setShowAddMember(false)}>
+          <div style={{ ...S.modalBox, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 14px" }}>Adicionar Membro ao Funil</h3>
+            <div style={{ maxHeight: 380, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+              {allMembers.map(m => (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#fafafa", borderRadius: 8, border: "1px solid #f0f0f0", cursor: "pointer" }}
+                  onClick={() => addMemberToPipeline(m)}>
+                  <Avatar name={m.name} size={30} city={m.city} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{m.name}</p>
+                    <p style={{ fontSize: 11, color: "#888", margin: 0 }}>{m.specialty} · {m.city}</p>
+                  </div>
+                  <span style={{ fontSize: 11, color: C.verdeMedio }}>+ Adicionar</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      )}
+    </div>
+  );
+}
+
+
+
+// ─── MAPEAMENTO ───────────────────────────────────────────────────────────────
+const VAGAS_CONFIG = {
+  medicas: ["Cardiologia","Dermatologia","Endocrinologia","Gastroenterologia","Ginecologia","Neurologia","Oncologia","Ortopedia","Otorrinolaringologia","Pediatria","Pneumologia","Psiquiatria","Reumatologia","Urologia","Oftalmologia","Cirurgia Geral","Cirurgia Plastica","Infectologia","Nefrologia","Hematologia"],
+  naoMedicas: ["Nutricao","Psicologia","Fisioterapia","Fonoaudiologia","Odontologia","Enfermagem"],
+};
+
+const CIDADES_MAP = [
+  { n: "Ribeirao Preto", e: "SP", p: 720000 },
+  { n: "Uberlandia", e: "MG", p: 706000 },
+  { n: "Sao Jose do Rio Preto", e: "SP", p: 460000 },
+  { n: "Bauru", e: "SP", p: 380000 },
+  { n: "Uberaba", e: "MG", p: 340000 },
+  { n: "Presidente Prudente", e: "SP", p: 230000 },
+  { n: "Campinas", e: "SP", p: 1200000 },
+  { n: "Sao Paulo", e: "SP", p: 12000000 },
+  { n: "Belo Horizonte", e: "MG", p: 2500000 },
+  { n: "Curitiba", e: "PR", p: 1900000 },
+  { n: "Porto Alegre", e: "RS", p: 1400000 },
+  { n: "Goiania", e: "GO", p: 1500000 },
+  { n: "Florianopolis", e: "SC", p: 520000 },
+  { n: "Brasilia", e: "DF", p: 3000000 },
+  { n: "Franca", e: "SP", p: 350000 },
+  { n: "Marilia", e: "SP", p: 230000 },
+  { n: "Fortaleza", e: "CE", p: 2700000 },
+  { n: "Recife", e: "PE", p: 1600000 },
+  { n: "Salvador", e: "BA", p: 2900000 },
+  { n: "Manaus", e: "AM", p: 2200000 },
+];
+
+function calcVagas2(p) {
+  var f = Math.pow(p / 700000, 0.6);
+  return { macro: Math.max(2, Math.round(6 * f)), nmed: Math.max(2, Math.round(8 * f)) };
+}
+
+function normCM(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s*[\/\-,]\s*[a-z]{2}$/i, "").trim(); }
+function normSM(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim(); }
+
+function Mapeamento({ onNav }) {
+  var [selCity, setSelCity] = useState(null);
+  var [search, setSearch] = useState("");
+  var members = DB.get("members", []).filter(function(m) { return m.status === "active"; });
+
+  var filtered = search ? CIDADES_MAP.filter(function(c) { return normCM(c.n).includes(normCM(search)); }) : CIDADES_MAP;
+
+  function getCityCount(name) { return members.filter(function(m) { return normCM(m.city) === normCM(name); }).length; }
+
+  var cityMems = selCity ? members.filter(function(m) { return normCM(m.city) === normCM(selCity.n); }) : [];
+  var vg = selCity ? calcVagas2(selCity.p) : null;
+
+  function getMUsed(esp) { return cityMems.filter(function(m) { return normSM(m.specialty) === normSM(esp); }).length; }
+
+  function renderRow(esp, used, total, onVer) {
+    var livre = Math.max(0, total - used);
+    var isFull = livre === 0 && used > 0;
+    var pct = Math.min(100, total > 0 ? (used / total) * 100 : 0);
+    var rowMems = cityMems.filter(function(m) { return normSM(m.specialty) === normSM(esp); });
+    return (
+      <div key={esp} style={{ background: isFull ? "#f0fdf4" : "#fafafa", borderRadius: 7, padding: "8px 10px", border: "1px solid " + (isFull ? "#a7f3d0" : "#f0f0f0"), marginBottom: 5 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600 }}>{esp}</span>
+            {livre > 0 && (
+              <button onClick={onVer} style={{ fontSize: 10, background: C.azulPetroleo + "20", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "40", borderRadius: 99, padding: "2px 8px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" }}>
+                Ver Leads
+              </button>
+            )}
+          </div>
+          <span style={{ fontSize: 11, color: isFull ? "#0f6e56" : "#888", fontWeight: isFull ? 700 : 400 }}>
+            {used}/{total} {isFull ? "Completo" : "(" + livre + " vaga" + (livre !== 1 ? "s" : "") + ")"}
+          </span>
+        </div>
+        <div style={{ width: "100%", height: 4, background: "#f0f0f0", borderRadius: 99, marginBottom: rowMems.length > 0 ? 5 : 0 }}>
+          <div style={{ height: "100%", background: isFull ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: pct + "%" }} />
+        </div>
+        {rowMems.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+            {rowMems.map(function(m) { return (
+              <span key={m.id} style={{ fontSize: 10, background: "#fff", border: "1px solid #e5e5e5", borderRadius: 99, padding: "2px 7px", color: "#555" }}>
+                {m.name}
+              </span>
+            ); })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={S.topbar}>
+        <div>
+          <h1 style={S.sectionTitle}>Mapeamento de Vagas</h1>
+          <p style={S.sectionSub}>Vagas por cidade baseado em membros ativos</p>
+        </div>
+      </div>
+
+      <div style={{ position: "relative", marginBottom: 16, maxWidth: 320 }}>
+        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#aaa" }}>{I.search}</span>
+        <input style={{ ...S.input, paddingLeft: 28, height: 34, fontSize: 13 }}
+          placeholder="Buscar cidade..." value={search}
+          onChange={function(e) { setSearch(e.target.value); }} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr 1.6fr" : "repeat(auto-fill,minmax(220px,1fr))", gap: 14, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: selCity ? "1fr" : "repeat(auto-fill,minmax(220px,1fr))", gap: 10 }}>
+          {filtered.map(function(c) {
+            var used = getCityCount(c.n);
+            var cv = calcVagas2(c.p);
+            var pct = Math.min(100, Math.round((used / Math.max(1, cv.macro * 2)) * 100));
+            var isSel = selCity && selCity.n === c.n;
+            return (
+              <div key={c.n} onClick={function() { setSelCity(isSel ? null : c); }}
+                style={{ ...S.card, cursor: "pointer", border: isSel ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5", background: isSel ? C.azulPetroleo + "08" : "#fff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{c.n}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>{c.e} - {Math.round(c.p / 1000)}k hab</div>
+                  </div>
+                  <span style={{ fontSize: 12, background: used > 0 ? C.azulPetroleo + "15" : "#f7f7f5", color: used > 0 ? C.azulPetroleo : "#aaa", borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>
+                    {used} membros
+                  </span>
+                </div>
+                <div style={{ width: "100%", height: 5, background: "#f0f0f0", borderRadius: 99 }}>
+                  <div style={{ height: "100%", background: pct >= 80 ? "#10B981" : C.azulPetroleo, borderRadius: 99, width: pct + "%" }} />
+                </div>
+                <div style={{ fontSize: 10, color: "#aaa", marginTop: 4 }}>{pct}% preenchido</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {selCity && vg && (
+          <div>
+            <div style={{ background: "linear-gradient(135deg," + C.noite + "," + C.azulPetroleo + ")", borderRadius: 12, padding: "16px 18px", color: "#fff", marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>{selCity.n} - {selCity.e}</div>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>{cityMems.length} membros ativos</div>
+                </div>
+                <button onClick={function() { setSelCity(null); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12 }}>
+                  Fechar
+                </button>
+              </div>
+            </div>
+
+            <div style={{ ...S.card, marginBottom: 10 }}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.azulPetroleo }}>Especialidades Medicas</h4>
+              {VAGAS_CONFIG.medicas.map(function(esp) {
+                var used = getMUsed(esp);
+                return renderRow(esp, used, vg.macro, function() { onNav && onNav("leads", { city: selCity.n, spec: esp }); });
+              })}
+            </div>
+
+            <div style={S.card}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px", color: C.verdeMedio }}>Especialidades Nao Medicas</h4>
+              {VAGAS_CONFIG.naoMedicas.map(function(esp) {
+                var used = getMUsed(esp);
+                return renderRow(esp, used, vg.nmed, function() { onNav && onNav("leads", { city: selCity.n, spec: esp }); });
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ─── GERADOR DE LEADS IA ──────────────────────────────────────────────────────
+const SUBESP_G = { "Cardiologia": ["Eletrofisiologia", "Cardiologia intervencionista", "Insuficiência cardíaca", "Cardiologia esportiva"], "Dermatologia": ["Dermatoscopia", "Tricologia", "Dermato-oncologia"], "Endocrinologia": ["Diabetes mellitus", "Tireoide", "Obesidade e metabolismo"], "Gastroenterologia": ["Endoscopia digestiva", "Hepatologia", "Doenças inflamatórias"], "Ginecologia e Obstetrícia": ["Medicina fetal", "Endometriose", "Reprodução assistida", "Mastologia"], "Neurologia": ["AVC", "Epilepsia", "Demências", "Parkinson", "Cefaleias"], "Oncologia": ["Onco-hematologia", "Imunoterapia", "Oncologia mamária"], "Ortopedia": ["Joelho", "Coluna vertebral", "Quadril", "Trauma"], "Psiquiatria": ["Transtornos do humor", "Ansiedade e TOC", "Dependência química"], "Urologia": ["Uro-oncologia", "Andrologia", "Litíase"], "Oftalmologia": ["Retina", "Córnea", "Glaucoma"], "Cirurgia Geral": ["Laparoscopia", "Cirurgia bariátrica", "Colorretal"], "Nutrição": ["Nutrição esportiva", "Nutrição clínica", "TCA"], "Psicologia": ["TCC", "Neuropsicologia", "ABA e TEA"], "Fisioterapia": ["Ortopédica", "Neurológica", "Pélvica"], "Fonoaudiologia": ["Disfagia", "Voz", "Linguagem infantil"] };
+const CIDS_G = ["São Paulo - SP", "Rio de Janeiro - RJ", "Belo Horizonte - MG", "Campinas - SP", "Ribeirão Preto - SP", "Curitiba - PR", "Porto Alegre - RS", "Florianópolis - SC", "Salvador - BA", "Fortaleza - CE", "Recife - PE", "Brasília - DF", "Goiânia - GO", "Manaus - AM", "Uberlândia - MG", "Bauru - SP", "São José do Rio Preto - SP", "Uberaba - MG", "Presidente Prudente - SP", "Natal - RN", "João Pessoa - PB", "Aracaju - SE", "Campo Grande - MS", "Cuiabá - MT"];
+const NAO_MED_G = new Set(["Nutrição", "Psicologia", "Fisioterapia", "Fonoaudiologia"]);
+
+async function fetchBatch(form, idx, size) {
+  const isMed = !NAO_MED_G.has(form.esp);
+  const subPart = form.sub ? " — subespecialidade: " + form.sub : "";
+  const medPart = isMed ? "Médico com RQE, formação USP/UNICAMP/UNIFESP/FAMERP/Einstein/Sírio ou equivalente, SEM práticas questionáveis." : "Excelente formação reconhecida, clínicas premium.";
+  const acadPart = form.acad === "mestrado_doutorado" ? "Preferência mestrado/doutorado." : "";
+  const tipoPart = form.tipo === "particular" ? " Preferência atendimento particular." : "";
+  const prompt = "Especialista em mapeamento de profissionais de saúde para PARTIC. Gere " + size + " profissionais REAIS de " + form.esp + subPart + " em " + form.cidade + ". Lote " + (idx + 1) + ".\n" + medPart + "\n" + acadPart + tipoPart + "\nRetorne SOMENTE JSON: {\"p\":[{\"n\":\"Nome\",\"sub\":\"subesp\",\"f\":\"Instituição\",\"h\":\"Hospital\",\"at\":\"Particular\",\"ig\":\"@ig ou A verificar\",\"tel\":\"(XX) 9XXXX-XXXX ou A verificar\",\"email\":\"email ou A verificar\",\"d\":\"Diferenciais\",\"sc\":8,\"j\":\"Justificativa\"}]}";
+  const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4000, messages: [{ role: "user", content: prompt }] }) });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  const raw = (d.content?.find(b => b.type === "text")?.text || "").replace(/```json|```/g, "").trim();
+  let parsed; try { parsed = JSON.parse(raw); } catch { try { parsed = JSON.parse(raw + "]}"); } catch { throw new Error("Erro ao interpretar IA."); } }
+  const [city, state] = (form.cidade || "").split(" - ");
+  return (parsed.p || []).map(p => ({ id: `${Date.now()}-${Math.random()}`, nome: p.n || "", esp: form.esp, sub: p.sub || form.sub || "", cidade: city || "", estado: state || "", formacao: p.f || "", hospital: p.h || "", instagram: p.ig || "A verificar", telefone: p.tel || "A verificar", email: p.email || "A verificar", atendimento: p.at || "A verificar", diferenciais: p.d || "", score: Number(p.sc || 0), justificativa: p.j || "" }));
+}
+
+function LeadGenerator({ onNav }) {
+  const [form, setForm] = useState({ cidade: "", esp: "", sub: "", acad: "qualquer", tipo: "particular", qtd: "10" });
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState("");
+  const [leads, setLeads] = useState([]);
+  const [selected, setSelected] = useState(new Set());
+  const [expandedId, setExpandedId] = useState(null);
+  const subs = form.esp ? (SUBESP_G[form.esp] || []) : [];
+  const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  async function generate() {
+    if (!form.cidade) return alert("Selecione uma cidade");
+    if (!form.esp) return alert("Selecione uma especialidade");
+    setLoading(true); setLeads([]); setSelected(new Set());
+    const total = parseInt(form.qtd); const n = Math.ceil(total / 5); let all = [];
+    try {
+      for (let i = 0; i < n; i++) {
+        const size = Math.min(5, total - i * 5); setProgress(`Lote ${i + 1}/${n}…`);
+        const batch = await fetchBatch(form, i, size); all = [...all, ...batch]; setLeads([...all]);
+      }
+      setSelected(new Set(all.filter(l => l.score >= 7).map(l => l.id)));
+      showToast(`${all.length} leads gerados ✓`);
+    } catch (e) { alert("Erro: " + e.message); }
+    setProgress(""); setLoading(false);
+  }
+
+  function sendToLeads() {
+    const toAdd = leads.filter(l => selected.has(l.id));
+    if (!toAdd.length) return alert("Selecione ao menos um lead");
+    const current = DB.get("contacts", []);
+    const ids = new Set(current.map(l => String(l.id)));
+    const newLeads = toAdd.filter(l => !ids.has(String(l.id))).map(l => ({ id: Date.now() + Math.random(), name: l.nome, profession: NAO_MED_G.has(l.esp) ? l.esp : "Médico", specialty: l.esp, subspecialty: l.sub, city: l.cidade, state: l.estado, formation: l.formacao, phone: l.telefone !== "A verificar" ? l.telefone : "", email: l.email !== "A verificar" ? l.email : "", instagram: l.instagram !== "A verificar" ? l.instagram : "", stage: "curadoria", source: "Gerador IA PARTIC", particScore: l.score, notes: l.diferenciais, sentToCuration: false, createdAt: new Date().toISOString() }));
+    const newWithStage = newLeads.map(l => ({ ...l, stage: "lead" }));
+    DB.set("contacts", [...current, ...newWithStage]);
+    showToast(`${newWithStage.length} leads salvos ✓`);
+    setSelected(new Set());
+    onNav("leads");
+  }
+
+  return (
+    <div>
+      <div style={S.topbar}>
+        <div><h1 style={S.sectionTitle}>✦ Gerador de Leads IA</h1><p style={S.sectionSub}>Score ≥ 7 pré-selecionados · enviados direto para Leads</p></div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, alignItems: "start" }}>
+        <div style={S.card}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#888", textTransform: "uppercase", margin: "0 0 14px" }}>Configurar</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div><label style={S.lbl}>Cidade *</label><select style={S.select} value={form.cidade} onChange={e => setF("cidade", e.target.value)}><option value="">Selecionar...</option>{CIDS_G.map(c => <option key={c}>{c}</option>)}</select></div>
+            <div><label style={S.lbl}>Especialidade *</label><select style={S.select} value={form.esp} onChange={e => { setF("esp", e.target.value); setF("sub", ""); }}><option value="">Selecionar...</option><optgroup label="Médicos">{Object.keys(SUBESP_G).filter(k => !NAO_MED_G.has(k)).map(e => <option key={e}>{e}</option>)}</optgroup><optgroup label="Não-médicos">{[...NAO_MED_G].map(e => <option key={e}>{e}</option>)}</optgroup></select></div>
+            <div><label style={S.lbl}>Subespecialidade {form.esp && `(${subs.length})`}</label><select style={S.select} value={form.sub} onChange={e => setF("sub", e.target.value)} disabled={!form.esp}><option value="">Todas / Geral</option>{subs.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <div><label style={S.lbl}>Foco</label><select style={S.select} value={form.acad} onChange={e => setF("acad", e.target.value)}><option value="qualquer">Qualquer</option><option value="mestrado_doutorado">Mestrado/Dr</option><option value="professor">Acadêmico</option></select></div>
+              <div><label style={S.lbl}>Qtd</label><select style={S.select} value={form.qtd} onChange={e => setF("qtd", e.target.value)}><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20">20</option></select></div>
+            </div>
+            <button style={{ ...S.btnP, justifyContent: "center", opacity: loading ? 0.6 : 1 }} onClick={generate} disabled={loading}>{loading ? `⏳ ${progress}` : "✦ Gerar leads com IA"}</button>
+          </div>
+        </div>
+        <div>
+          {leads.length > 0 && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <span style={{ fontSize: 12, color: "#888" }}>{leads.length} gerados · {selected.size} selecionados</span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={S.btnO} onClick={() => setSelected(selected.size === leads.length ? new Set() : new Set(leads.map(l => l.id)))}>{selected.size === leads.length ? "Desmarcar" : "Todos"}</button>
+                  {selected.size > 0 && <button style={S.btnG} onClick={sendToLeads}>＋ Salvar {selected.size} em Leads</button>}
+                </div>
+              </div>
+              {leads.map(l => {
+                const isSel = selected.has(l.id); const isExp = expandedId === l.id;
+                const hasWpp = l.telefone && l.telefone !== "A verificar";
+                const hasIG = l.instagram && l.instagram !== "A verificar";
+                const hasEmail = l.email && l.email !== "A verificar";
+                return (
+                  <div key={l.id} style={{ border: isSel ? `1.5px solid ${C.verdeMedio}` : "1px solid #e5e5e5", borderRadius: 10, background: isSel ? "#f0fdfb" : "#fff", marginBottom: 8, overflow: "hidden" }}>
+                    <div style={{ padding: "10px 12px" }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                        <button onClick={() => setSelected(prev => { const n = new Set(prev); n.has(l.id) ? n.delete(l.id) : n.add(l.id); return n; })} style={{ marginTop: 2, width: 18, height: 18, borderRadius: 4, border: isSel ? `2px solid ${C.verdeMedio}` : "2px solid #ddd", background: isSel ? C.verdeMedio : "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                          {isSel && <span style={{ color: "#fff", fontSize: 10, fontWeight: 900 }}>✓</span>}
+                        </button>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <div>
+                              <span style={{ fontSize: 13, fontWeight: 700 }}>{l.nome}</span>
+                              <span style={{ marginLeft: 6, background: C.azulPetroleo + "15", color: C.azulPetroleo, borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 600 }}>{l.esp}</span>
+                              {l.sub && <span style={{ fontSize: 10, color: "#aaa", marginLeft: 4 }}>· {l.sub}</span>}
+                            </div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: l.score >= 8 ? "#0f6e56" : "#ba7517", background: l.score >= 8 ? "#f0faf4" : "#fef9ec", borderRadius: 99, padding: "1px 8px" }}>{l.score}/10</span>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 12px", marginTop: 4, fontSize: 11, color: "#666" }}>
+                            <span>📍 {l.cidade}{l.estado ? `, ${l.estado}` : ""}</span>
+                            <span>🏥 {l.hospital || "A verificar"}</span>
+                            <span>🎓 {l.formacao || "A verificar"}</span>
+                            {hasWpp && <span>📱 {l.telefone}</span>}
+                          </div>
+                        </div>
+                        <button onClick={() => setExpandedId(isExp ? null : l.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ccc", fontSize: 12, flexShrink: 0 }}>{isExp ? "▲" : "▼"}</button>
+                      </div>
+                    </div>
+                    {isExp && (
+                      <div style={{ borderTop: "1px solid #f0f0f0", padding: "10px 12px 12px" }}>
+                        {l.diferenciais && <p style={{ fontSize: 11, color: "#555", margin: "0 0 6px" }}>⭐ {l.diferenciais}</p>}
+                        {l.justificativa && <p style={{ fontSize: 11, color: "#aaa", fontStyle: "italic", margin: "0 0 8px" }}>{l.justificativa}</p>}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                          <a href={`https://www.google.com/search?q=${encodeURIComponent(l.nome + " " + l.esp + " " + l.cidade)}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>🔍 Google</a>
+                          <a href={`https://www.google.com/maps/search/${encodeURIComponent((l.hospital || l.nome) + " " + l.cidade)}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm(C.verdeEscuro), textDecoration: "none" }}>🗺️ Maps</a>
+                          {hasIG && <a href={`https://instagram.com/${l.instagram.replace("@", "")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#833ab4"), textDecoration: "none" }}>{I.ig}</a>}
+                          {hasWpp && <a href={`https://wa.me/55${l.telefone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ ...S.btnSm("#128C7E"), textDecoration: "none" }}>{I.wpp} WhatsApp</a>}
+                          {hasEmail && <a href={`mailto:${l.email}`} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {leads.length === 0 && !loading && (
+            <div style={{ ...S.card, textAlign: "center", padding: "48px 20px" }}>
+              <p style={{ fontSize: 32, margin: "0 0 10px" }}>✦</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.azulPetroleo, margin: "0 0 6px" }}>Configure e gere seus leads</p>
+              <p style={{ fontSize: 12, color: "#aaa", margin: 0 }}>Selecione cidade e especialidade no painel ao lado</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── CALENDÁRIO ───────────────────────────────────────────────────────────────
+const MEETING_TYPES = {
+  comercial: { label: "Ação Comercial",     color: "#8B5CF6", bg: "#F5F3FF" },
+  prospect:  { label: "Prospect",           color: "#3B82F6", bg: "#EFF6FF" },
+  membro:    { label: "Reunião com Membro", color: "#10B981", bg: "#F0FDF4" },
+  curadoria: { label: "Curadoria",          color: "#F59E0B", bg: "#FFFBEB" },
+  outro:     { label: "Outro",              color: "#94A3B8", bg: "#F8FAFC" },
+};
+
+const MONTHS_PT2 = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const DAYS_PT2 = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+
+function Calendar() {
+  const [meetings, setMeetings] = useState(() => DB.get("meetings", []));
+  const [view, setView] = useState("month");
+  const [now, setNow] = useState(new Date());
+  const [showAdd, setShowAdd] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [selMeeting, setSelMeeting] = useState(null);
+  const [form, setForm] = useState({ title: "", date: "", time: "", type: "comercial", format: "online", link: "", address: "", notes: "", contactName: "" });
+
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const saveMeetings = m => { setMeetings(m); DB.set("meetings", m); };
+
+  function openAdd(dateStr) {
+    setForm({ title: "", date: dateStr || "", time: "", type: "comercial", format: "online", link: "", address: "", notes: "", contactName: "" });
+    setEditItem(null);
+    setShowAdd(true);
+  }
+
+  function openEdit(m) {
+    setForm({ ...m });
+    setEditItem(m.id);
+    setShowAdd(true);
+  }
+
+  function saveMeeting() {
+    if (!form.title.trim()) return alert("Informe o título");
+    if (!form.date) return alert("Informe a data");
+    if (editItem) {
+      saveMeetings(meetings.map(m => m.id === editItem ? { ...form, id: editItem } : m));
+      showToast("Reunião atualizada!");
+    } else {
+      saveMeetings([...meetings, { ...form, id: Date.now() + Math.random(), createdAt: new Date().toISOString() }]);
+      showToast("Reunião agendada!");
+    }
+    setShowAdd(false);
+    setSelMeeting(null);
+  }
+
+  function deleteMeeting(id) {
+    if (!confirm("Excluir esta reunião?")) return;
+    saveMeetings(meetings.filter(m => m.id !== id));
+    setSelMeeting(null);
+    showToast("Reunião excluída");
+  }
+
+  function getMeetingsForDay(d) {
+    return meetings.filter(m => {
+      if (!m.date) return false;
+      const md = new Date(m.date + "T12:00:00");
+      return md.getFullYear() === year && md.getMonth() === month && md.getDate() === d;
+    });
+  }
+
+  function getUpcoming() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    return meetings
+      .filter(m => m.date && new Date(m.date + "T12:00:00") >= today)
+      .sort((a,b) => new Date(a.date + "T" + (a.time || "00:00")) - new Date(b.date + "T" + (b.time || "00:00")));
+  }
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+
+  return (
+    <div>
+      <div style={S.topbar}>
+        <div>
+          <h1 style={S.sectionTitle}>Calendário</h1>
+          <p style={S.sectionSub}>{meetings.length} reuniões cadastradas</p>
+        </div>
+        <button style={S.btnP} onClick={() => openAdd("")}>{I.plus} Nova reunião</button>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {["month","list"].map(v => (
+          <button key={v} onClick={() => setView(v)}
+            style={{ padding: "6px 16px", fontSize: 13, fontWeight: view === v ? 700 : 400, borderRadius: 8, border: view === v ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5", background: view === v ? C.azulPetroleo + "10" : "#fff", color: view === v ? C.azulPetroleo : "#555", cursor: "pointer" }}>
+            {v === "month" ? "📅 Mensal" : "📋 Lista"}
+          </button>
+        ))}
+      </div>
+
+      {view === "month" && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+            <button onClick={() => setNow(new Date(year, month - 1, 1))} style={{ ...S.btnO, padding: "5px 12px" }}>{"<"}</button>
+            <span style={{ fontSize: 16, fontWeight: 700, minWidth: 180, textAlign: "center" }}>{MONTHS_PT2[month]} {year}</span>
+            <button onClick={() => setNow(new Date(year, month + 1, 1))} style={{ ...S.btnO, padding: "5px 12px" }}>{">"}</button>
+            <button onClick={() => setNow(new Date())} style={{ ...S.btnO, fontSize: 11, height: 30 }}>Hoje</button>
+          </div>
+
+          <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", background: C.noite }}>
+              {DAYS_PT2.map(d => (
+                <div key={d} style={{ padding: "10px 0", textAlign: "center", fontSize: 12, fontWeight: 700, color: "#fff" }}>{d}</div>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
+              {Array.from({ length: firstDay }).map((_, i) => (
+                <div key={"empty-" + i} style={{ minHeight: 80, borderRight: "1px solid #f0f0f0", borderBottom: "1px solid #f0f0f0", background: "#fafafa" }} />
+              ))}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const dayMeetings = getMeetingsForDay(day);
+                const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
+                return (
+                  <div key={day} onClick={() => openAdd(year + "-" + String(month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0"))}
+                    style={{ minHeight: 80, borderRight: "1px solid #f0f0f0", borderBottom: "1px solid #f0f0f0", padding: 4, cursor: "pointer", background: isToday ? C.azulPetroleo + "05" : "#fff" }}>
+                    <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 400, color: isToday ? C.azulPetroleo : "#333", width: 22, height: 22, borderRadius: "50%", background: isToday ? C.azulPetroleo : "transparent", color: isToday ? "#fff" : "#333", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 2 }}>{day}</div>
+                    {dayMeetings.slice(0,2).map(m => {
+                      const cfg = MEETING_TYPES[m.type] || MEETING_TYPES.outro;
+                      return (
+                        <div key={m.id} onClick={e => { e.stopPropagation(); setSelMeeting(m); }}
+                          style={{ fontSize: 9, background: cfg.bg, color: cfg.color, borderRadius: 4, padding: "1px 4px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600, cursor: "pointer" }}>
+                          {m.time ? m.time + " " : ""}{m.title}
+                        </div>
+                      );
+                    })}
+                    {dayMeetings.length > 2 && <div style={{ fontSize: 9, color: "#aaa" }}>+{dayMeetings.length - 2} mais</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {view === "list" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {getUpcoming().length === 0 && (
+            <div style={{ ...S.card, textAlign: "center", padding: "48px 20px", color: "#aaa" }}>
+              <p style={{ fontSize: 32, margin: "0 0 10px" }}>📅</p>
+              <p>Nenhuma reunião próxima. Clique em Nova reunião para agendar.</p>
+            </div>
+          )}
+          {getUpcoming().map(m => {
+            const cfg = MEETING_TYPES[m.type] || MEETING_TYPES.outro;
+            const d = new Date(m.date + "T12:00:00");
+            const isToday = d.toDateString() === new Date().toDateString();
+            return (
+              <div key={m.id} style={{ ...S.card, borderLeft: "3px solid " + cfg.color, padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{m.title}</span>
+                      <span style={{ fontSize: 11, background: cfg.bg, color: cfg.color, borderRadius: 99, padding: "1px 8px", fontWeight: 600 }}>{cfg.label}</span>
+                      {isToday && <span style={{ fontSize: 11, background: "#FEF3C7", color: "#92400E", borderRadius: 99, padding: "1px 8px", fontWeight: 700 }}>HOJE</span>}
+                    </div>
+                    <div style={{ display: "flex", gap: 12, fontSize: 12, color: "#666", flexWrap: "wrap" }}>
+                      <span>📅 {d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}{m.time ? " às " + m.time : ""}</span>
+                      <span>{m.format === "online" ? "💻 Online" : "📍 Presencial"}</span>
+                      {m.contactName && <span>👤 {m.contactName}</span>}
+                    </div>
+                    {m.link && <a href={m.link} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: C.azulPetroleo, display: "block", marginTop: 4 }}>🔗 {m.link}</a>}
+                    {m.address && <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>📍 {m.address}</div>}
+                    {m.notes && <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>📝 {m.notes}</div>}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                    <button onClick={() => openEdit(m)} style={{ fontSize: 11, background: C.azulPetroleo + "15", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "30", borderRadius: 6, padding: "5px 10px", cursor: "pointer" }}>Editar</button>
+                    <button onClick={() => deleteMeeting(m.id)} style={{ fontSize: 11, background: "#fff0f0", color: "#a32d2d", border: "1px solid #fca5a5", borderRadius: 6, padding: "5px 8px", cursor: "pointer" }}>{I.trash}</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {selMeeting && (
+        <div style={S.modal} onClick={() => setSelMeeting(null)}>
+          <div style={{ ...S.modalBox, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            {(() => {
+              const cfg = MEETING_TYPES[selMeeting.type] || MEETING_TYPES.outro;
+              const d = new Date(selMeeting.date + "T12:00:00");
+              return (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px" }}>{selMeeting.title}</h3>
+                      <span style={{ fontSize: 12, background: cfg.bg, color: cfg.color, borderRadius: 99, padding: "2px 10px", fontWeight: 600 }}>{cfg.label}</span>
+                    </div>
+                    <button style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: 18 }} onClick={() => setSelMeeting(null)}>{I.x}</button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, marginBottom: 16 }}>
+                    <div>📅 {d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}{selMeeting.time ? " às " + selMeeting.time : ""}</div>
+                    <div>{selMeeting.format === "online" ? "💻 Online" : "📍 Presencial"}</div>
+                    {selMeeting.contactName && <div>👤 {selMeeting.contactName}</div>}
+                    {selMeeting.link && <div>🔗 <a href={selMeeting.link} target="_blank" rel="noreferrer" style={{ color: C.azulPetroleo }}>{selMeeting.link}</a></div>}
+                    {selMeeting.address && <div>📍 {selMeeting.address}</div>}
+                    {selMeeting.notes && <div>📝 {selMeeting.notes}</div>}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button style={S.btnP} onClick={() => { openEdit(selMeeting); setSelMeeting(null); }}>Editar</button>
+                    <button style={{ ...S.btnO, color: "#a32d2d", borderColor: "#fca5a5" }} onClick={() => deleteMeeting(selMeeting.id)}>Excluir</button>
+                    <button style={S.btnO} onClick={() => setSelMeeting(null)}>Fechar</button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {showAdd && (
+        <div style={S.modal} onClick={() => setShowAdd(false)}>
+          <div style={{ ...S.modalBox, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 18px" }}>{editItem ? "Editar Reunião" : "Nova Reunião"}</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+              <div><label style={S.lbl}>Título *</label><input style={S.input} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Reunião com Dr. João" /></div>
+              <div><label style={S.lbl}>Profissional/Contato</label><input style={S.input} value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} placeholder="Nome do profissional" /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div><label style={S.lbl}>Data *</label><input type="date" style={S.input} value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></div>
+                <div><label style={S.lbl}>Horário</label><input type="time" style={S.input} value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} /></div>
+              </div>
+              <div><label style={S.lbl}>Tipo</label>
+                <select style={S.select} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                  {Object.entries(MEETING_TYPES).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={S.lbl}>Formato</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {["online","presencial"].map(t => (
+                    <button key={t} onClick={() => setForm(f => ({ ...f, format: t }))}
+                      style={{ flex: 1, padding: "8px", fontSize: 13, fontWeight: form.format === t ? 700 : 400, borderRadius: 8, border: form.format === t ? "2px solid " + C.azulPetroleo : "1px solid #ddd", background: form.format === t ? C.azulPetroleo + "10" : "#fff", cursor: "pointer", color: form.format === t ? C.azulPetroleo : "#555" }}>
+                      {t === "online" ? "💻 Online" : "📍 Presencial"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {form.format === "online" && <div><label style={S.lbl}>Link</label><input style={S.input} value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} placeholder="https://meet.google.com/..." /></div>}
+              {form.format === "presencial" && <div><label style={S.lbl}>Endereço</label><input style={S.input} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>}
+              <div><label style={S.lbl}>Observações</label><textarea style={{ ...S.input, height: 60, resize: "none" }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={S.btnP} onClick={saveMeeting}>{editItem ? "Atualizar" : "Agendar"}</button>
+              <button style={S.btnO} onClick={() => setShowAdd(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ─── MEMBROS ──────────────────────────────────────────────────────────────────
+function Members() {
+  const [members, setMembers] = useState(() => DB.get("members", []));
+  const [search, setSearch] = useState("");
+  const [filterCity, setFilterCity] = useState("");
+  const [filterSpec, setFilterSpec] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [form, setForm] = useState({
+    name: "", profession: "Medico", specialty: "", subspecialty: "",
+    councilNumber: "", rqe: "", personalContact: "", email: "",
+    cpf: "", schedulingContact: "", address: "", city: "", state: "",
+    clinic: "", instagram: "", monthlyFee: "", status: "active",
+    isAnchor: false, notes: "",
+  });
+
+  const save = m => { setMembers(m); DB.set("members", m); };
+
+  const activeMembers = members.filter(m => m.status === "active");
+  const cities = [...new Set(members.map(m => (m.city||"").trim()).filter(Boolean))].sort();
+  const specs = [...new Set(members.map(m => (m.specialty||"").trim()).filter(Boolean))].sort();
+
+  const normalize = s => (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+
+  const filtered = members.filter(m => {
+    if (filterCity && normalize(m.city) !== normalize(filterCity)) return false;
+    if (filterSpec && normalize(m.specialty) !== normalize(filterSpec)) return false;
+    if (search && !normalize(m.name).includes(normalize(search))) return false;
+    return true;
+  });
+
+  function openAdd() {
+    setForm({ name: "", profession: "Medico", specialty: "", subspecialty: "", councilNumber: "", rqe: "", personalContact: "", email: "", cpf: "", schedulingContact: "", address: "", city: "", state: "", clinic: "", instagram: "", monthlyFee: "", status: "active", isAnchor: false, notes: "" });
+    setEditItem(null);
+    setShowAdd(true);
+  }
+
+  function openEdit(m) {
+    setForm({ ...m });
+    setEditItem(m.id);
+    setShowAdd(true);
+  }
+
+  function saveMember() {
+    if (!form.name.trim()) return alert("Nome e obrigatorio");
+    if (editItem) {
+      save(members.map(m => m.id === editItem ? { ...form, id: editItem } : m));
+      showToast("Membro atualizado!");
+    } else {
+      save([...members, { ...form, id: Date.now() + Math.random(), joinedAt: new Date().toISOString() }]);
+      showToast("Membro adicionado!");
+    }
+    setShowAdd(false);
+  }
+
+  function deleteMember(id) {
+    if (!confirm("Remover este membro?")) return;
+    save(members.filter(m => m.id !== id));
+    showToast("Membro removido");
+  }
+
+  function exportCSV() {
+    const cols = ["name","profession","specialty","subspecialty","councilNumber","rqe","personalContact","email","cpf","schedulingContact","address","city","state","clinic","instagram","monthlyFee","status","notes"];
+    const headers = ["Nome","Profissao","Especialidade","Subespecialidade","CRM/Conselho","RQE","Contato Pessoal","Email","CPF/CNPJ","Contato Agendamento","Endereco","Cidade","Estado","Local Atendimento","Instagram","Mensalidade","Status","Observacoes"];
+    const rows = filtered.map(m => cols.map(c => String(m[c] || "").replace(/;/g, ",")).join(";"));
+    const csv = [headers.join(";"), ...rows].join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "membros_partic.csv"; a.click();
+    URL.revokeObjectURL(url);
+    showToast("CSV exportado!");
+  }
+
+  const COLS = [
+    { key: "name",              label: "Nome",              width: 200 },
+    { key: "profession",        label: "Profissao",         width: 100 },
+    { key: "specialty",         label: "Especialidade",     width: 200 },
+    { key: "councilNumber",     label: "CRM/Conselho",      width: 110 },
+    { key: "rqe",               label: "RQE",               width: 80  },
+    { key: "personalContact",   label: "Tel. Pessoal",      width: 150 },
+    { key: "email",             label: "E-mail",            width: 200 },
+    { key: "cpf",               label: "CPF/CNPJ",          width: 130 },
+    { key: "schedulingContact", label: "Tel. Agendamento",  width: 150 },
+    { key: "city",              label: "Cidade",            width: 150 },
+    { key: "clinic",            label: "Local Atendimento", width: 180 },
+    { key: "address",           label: "Endereco",          width: 200 },
+    { key: "instagram",         label: "Instagram",         width: 130 },
+    { key: "monthlyFee",        label: "Mensalidade",       width: 100 },
+    { key: "status",            label: "Status",            width: 90  },
+    { key: "actions",           label: "Acoes",             width: 120 },
+  ];
+
+  return (
+    <div>
+      <div style={S.topbar}>
+        <div>
+          <h1 style={S.sectionTitle}>Membros</h1>
+          <p style={S.sectionSub}>
+            <span style={{ color: C.azulPetroleo, fontWeight: 600 }}>{activeMembers.length} ativos</span>
+            {members.length !== activeMembers.length && <span style={{ color: "#aaa", marginLeft: 8 }}>· {members.length} total</span>}
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={S.btnO} onClick={exportCSV}>📥 Exportar CSV</button>
+          <button style={S.btnP} onClick={openAdd}>{I.plus} Novo membro</button>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ position: "relative" }}>
+          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#aaa" }}>{I.search}</span>
+          <input style={{ ...S.input, paddingLeft: 28, height: 34, fontSize: 13, width: 220 }}
+            placeholder="Buscar por nome..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <select style={{ ...S.select, height: 34, fontSize: 13, minWidth: 180 }}
+          value={filterCity} onChange={e => setFilterCity(e.target.value)}>
+          <option value="">Todas as cidades</option>
+          {cities.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select style={{ ...S.select, height: 34, fontSize: 13, minWidth: 180 }}
+          value={filterSpec} onChange={e => setFilterSpec(e.target.value)}>
+          <option value="">Todas especialidades</option>
+          {specs.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        {(search || filterCity || filterSpec) && (
+          <button style={{ ...S.btnO, height: 30, fontSize: 11 }} onClick={() => { setSearch(""); setFilterCity(""); setFilterSpec(""); }}>x Limpar</button>
+        )}
+        <span style={{ fontSize: 12, color: "#aaa", marginLeft: "auto" }}>{filtered.length} membros</span>
+      </div>
+
+      {/* Table with horizontal scroll */}
+      <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "max-content", minWidth: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: C.noite, position: "sticky", top: 0 }}>
+                {COLS.map(col => (
+                  <th key={col.key} style={{ ...S.th, width: col.width, minWidth: col.width, color: "#fff", background: C.noite, whiteSpace: "nowrap", padding: "12px 14px" }}>
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((m, idx) => (
+                <tr key={m.id} style={{ borderBottom: "1px solid #f0f0f0", background: idx % 2 === 0 ? "#fff" : "#fafafa" }}>
+                  <td style={{ ...S.td, width: 200, minWidth: 200 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Avatar name={m.name} size={32} city={m.city} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>{m.name}</div>
+                        {m.isAnchor && <span style={{ fontSize: 10, background: C.azulPetroleo + "20", color: C.azulPetroleo, borderRadius: 99, padding: "1px 6px", fontWeight: 700 }}>Ancora</span>}
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ ...S.td, width: 100, minWidth: 100 }}><span style={{ fontSize: 12, whiteSpace: "nowrap" }}>{m.profession || "Medico"}</span></td>
+                  <td style={{ ...S.td, width: 200, minWidth: 200 }}>
+                    <div style={{ fontSize: 13 }}>{m.specialty || "-"}</div>
+                    {m.subspecialty && <div style={{ fontSize: 11, color: "#EF4444" }}>{m.subspecialty}</div>}
+                  </td>
+                  <td style={{ ...S.td, width: 110, minWidth: 110 }}><span style={{ fontSize: 12, whiteSpace: "nowrap" }}>{m.councilNumber || "-"}</span></td>
+                  <td style={{ ...S.td, width: 80, minWidth: 80 }}><span style={{ fontSize: 12 }}>{m.rqe || "-"}</span></td>
+                  <td style={{ ...S.td, width: 150, minWidth: 150 }}>
+                    {m.personalContact
+                      ? <WppBtn phone={m.personalContact} size="xs" showNumber={true} />
+                      : <span style={{ fontSize: 12, color: "#ccc" }}>-</span>}
+                  </td>
+                  <td style={{ ...S.td, width: 200, minWidth: 200 }}>
+                    {m.email
+                      ? <a href={"mailto:" + m.email} style={{ fontSize: 12, color: C.azulPetroleo, whiteSpace: "nowrap" }}>{m.email}</a>
+                      : <span style={{ fontSize: 12, color: "#ccc" }}>-</span>}
+                  </td>
+                  <td style={{ ...S.td, width: 130, minWidth: 130 }}><span style={{ fontSize: 12, whiteSpace: "nowrap" }}>{m.cpf || "-"}</span></td>
+                  <td style={{ ...S.td, width: 150, minWidth: 150 }}>
+                    {m.schedulingContact
+                      ? <WppBtn phone={m.schedulingContact} size="xs" showNumber={true} />
+                      : <span style={{ fontSize: 12, color: "#ccc" }}>-</span>}
+                  </td>
+                  <td style={{ ...S.td, width: 150, minWidth: 150 }}><span style={{ fontSize: 12, whiteSpace: "nowrap" }}>{m.city || "-"}{m.state ? " - " + m.state : ""}</span></td>
+                  <td style={{ ...S.td, width: 180, minWidth: 180 }}><span style={{ fontSize: 12, whiteSpace: "nowrap" }}>{m.clinic || "-"}</span></td>
+                  <td style={{ ...S.td, width: 200, minWidth: 200 }}><span style={{ fontSize: 12 }}>{m.address || "-"}</span></td>
+                  <td style={{ ...S.td, width: 130, minWidth: 130 }}>
+                    {m.instagram
+                      ? <a href={"https://instagram.com/" + (m.instagram||"").replace("@","")} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#833ab4", whiteSpace: "nowrap" }}>@{(m.instagram||"").replace("@","")}</a>
+                      : <span style={{ fontSize: 12, color: "#ccc" }}>-</span>}
+                  </td>
+                  <td style={{ ...S.td, width: 100, minWidth: 100 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: C.verdeEscuro }}>
+                      {m.monthlyFee ? "R$ " + Number(m.monthlyFee).toLocaleString("pt-BR") : "-"}
+                    </span>
+                  </td>
+                  <td style={{ ...S.td, width: 90, minWidth: 90 }}>
+                    <span style={{ fontSize: 11, background: m.status === "active" ? "#f0faf4" : "#f7f7f5", color: m.status === "active" ? "#0f6e56" : "#888", borderRadius: 99, padding: "3px 8px", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {m.status === "active" ? "Ativo" : "Inativo"}
+                    </span>
+                  </td>
+                  <td style={{ ...S.td, width: 120, minWidth: 120 }}>
+                    <div style={{ display: "flex", gap: 5 }}>
+                      <button onClick={() => openEdit(m)}
+                        style={{ fontSize: 11, background: C.azulPetroleo + "15", color: C.azulPetroleo, border: "1px solid " + C.azulPetroleo + "30", borderRadius: 6, padding: "4px 8px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                        Editar
+                      </button>
+                      <button onClick={() => deleteMember(m.id)}
+                        style={{ fontSize: 11, background: "#fff0f0", color: "#a32d2d", border: "1px solid #fca5a5", borderRadius: 6, padding: "4px 7px", cursor: "pointer" }}>
+                        {I.trash}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={COLS.length} style={{ padding: "48px", textAlign: "center", color: "#aaa", fontSize: 13 }}>
+                    {members.length === 0 ? "Nenhum membro cadastrado. Use Importacao ou adicione manualmente." : "Nenhum membro corresponde aos filtros."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal add/edit */}
+      {showAdd && (
+        <div style={S.modal} onClick={() => setShowAdd(false)}>
+          <div style={{ ...S.modalBox, maxWidth: 640, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 18px" }}>{editItem ? "Editar Membro" : "Novo Membro"}</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+              <div style={{ gridColumn: "1/-1" }}><label style={S.lbl}>Nome *</label><input style={S.input} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div><label style={S.lbl}>Profissao</label>
+                <select style={S.select} value={form.profession} onChange={e => setForm(f => ({ ...f, profession: e.target.value }))}>
+                  {["Medico","Dentista","Psicologo","Fisioterapeuta","Nutricionista","Enfermeiro","Outro"].map(o => <option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div><label style={S.lbl}>Especialidade</label><input style={S.input} value={form.specialty} onChange={e => setForm(f => ({ ...f, specialty: e.target.value }))} /></div>
+              <div><label style={S.lbl}>Subespecialidade</label><input style={S.input} value={form.subspecialty} onChange={e => setForm(f => ({ ...f, subspecialty: e.target.value }))} /></div>
+              <div><label style={S.lbl}>CRM/Conselho</label><input style={S.input} value={form.councilNumber} onChange={e => setForm(f => ({ ...f, councilNumber: e.target.value }))} /></div>
+              <div><label style={S.lbl}>RQE</label><input style={S.input} value={form.rqe} onChange={e => setForm(f => ({ ...f, rqe: e.target.value }))} /></div>
+              <div><label style={S.lbl}>Contato Pessoal (WppBtn)</label><input style={S.input} value={form.personalContact} onChange={e => setForm(f => ({ ...f, personalContact: e.target.value }))} placeholder="(XX) 9XXXX-XXXX" /></div>
+              <div><label style={S.lbl}>E-mail</label><input style={S.input} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+              <div><label style={S.lbl}>CPF/CNPJ</label><input style={S.input} value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: e.target.value }))} /></div>
+              <div><label style={S.lbl}>Contato Agendamento</label><input style={S.input} value={form.schedulingContact} onChange={e => setForm(f => ({ ...f, schedulingContact: e.target.value }))} placeholder="(XX) 9XXXX-XXXX" /></div>
+              <div><label style={S.lbl}>Cidade</label><input style={S.input} value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} /></div>
+              <div><label style={S.lbl}>Estado (UF)</label><input style={S.input} value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} maxLength={2} placeholder="SP" /></div>
+              <div style={{ gridColumn: "1/-1" }}><label style={S.lbl}>Local de Atendimento</label><input style={S.input} value={form.clinic} onChange={e => setForm(f => ({ ...f, clinic: e.target.value }))} placeholder="Nome da clinica ou consultorio particular" /></div>
+              <div style={{ gridColumn: "1/-1" }}><label style={S.lbl}>Endereco Completo</label><input style={S.input} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
+              <div><label style={S.lbl}>Instagram</label><input style={S.input} value={form.instagram} onChange={e => setForm(f => ({ ...f, instagram: e.target.value }))} placeholder="@usuario" /></div>
+              <div><label style={S.lbl}>Mensalidade (R$)</label><input style={S.input} type="number" value={form.monthlyFee} onChange={e => setForm(f => ({ ...f, monthlyFee: e.target.value }))} /></div>
+              <div><label style={S.lbl}>Status</label>
+                <select style={S.select} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                  <option value="active">Ativo</option>
+                  <option value="inactive">Inativo</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 20 }}>
+                <input type="checkbox" id="isAnchor" checked={form.isAnchor || false} onChange={e => setForm(f => ({ ...f, isAnchor: e.target.checked }))} />
+                <label htmlFor="isAnchor" style={{ fontSize: 13, cursor: "pointer" }}>Ancora PARTIC</label>
+              </div>
+              <div style={{ gridColumn: "1/-1" }}><label style={S.lbl}>Observacoes</label><textarea style={{ ...S.input, height: 70, resize: "none" }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} /></div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={S.btnP} onClick={saveMember}>{editItem ? "Atualizar" : "Salvar"}</button>
+              <button style={S.btnO} onClick={() => setShowAdd(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function Anchors() {
+  const members = DB.get("members", []).filter(m => m.isAnchor);
+  // Dr. Leon Macedo always first (CEO/Âncora)
+  const leon = members.find(m => m.name && m.name.toLowerCase().includes("leon"));
+  const others = members.filter(m => !m.name || !m.name.toLowerCase().includes("leon"));
+  const sorted = leon ? [leon, ...others] : others;
+
+  const AnchorCard = ({ m, featured }) => (
+    <div style={{ ...S.card,
+      borderLeft: "3px solid " + getCityColor(m.city),
+      background: featured ? "linear-gradient(135deg," + C.noite + "08," + C.azulPetroleo + "08)" : "#fff",
+      border: featured ? "2px solid " + C.azulPetroleo : "1px solid #e5e5e5",
+      position: "relative",
+    }}>
+      {featured && (
+        <div style={{ position: "absolute", top: -10, left: 16, background: C.azulPetroleo, color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 99, padding: "2px 10px", letterSpacing: 1 }}>
+          ⚓ CEO PARTIC
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12, marginTop: featured ? 8 : 0 }}>
+        <Avatar name={m.name} size={featured ? 56 : 48} city={m.city} />
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: featured ? 16 : 14, fontWeight: 800, margin: "0 0 2px" }}>{m.name}</p>
+          <p style={{ fontSize: 12, color: "#666", margin: "0 0 3px" }}>{m.specialty}{m.subspecialty && <span style={{ color: "#EF4444" }}> · {m.subspecialty}</span>}</p>
+          <span style={{ fontSize: 11, background: getCityColor(m.city) + "20", color: getCityColor(m.city), borderRadius: 99, padding: "2px 8px", fontWeight: 700 }}>⚓ {m.city}{m.state ? " - " + m.state : ""}</span>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {m.personalContact && <WppBtn phone={m.personalContact} showNumber={true} />}
+        {m.email && <a href={"mailto:" + m.email} style={{ ...S.btnSm(C.azulPetroleo), textDecoration: "none" }}>{I.mail} E-mail</a>}
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={S.topbar}>
+        <div>
+          <h1 style={S.sectionTitle}>Membros Âncoras</h1>
+          <p style={S.sectionSub}>{members.length} âncoras confirmados</p>
+        </div>
+      </div>
+
+      {leon && (
+        <div style={{ marginBottom: 20 }}>
+          <AnchorCard m={leon} featured={true} />
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 12 }}>
+        {others.map(m => (
+          <AnchorCard key={m.id} m={m} featured={false} />
+        ))}
+        {others.length === 0 && !leon && (
           <div style={{ gridColumn: "1/-1", ...S.card, textAlign: "center", padding: "48px 20px", color: "#aaa" }}>
             <p style={{ fontSize: 32, margin: "0 0 10px" }}>⚓</p>
             <p>Nenhum âncora cadastrado ainda. Marque membros como âncora na tela de Membros.</p>
